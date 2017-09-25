@@ -2,7 +2,6 @@
 // Created by lshi on 17-9-25.
 //
 
-
 #include "deform_conv3d_cuda_forward.cu.h"
 
 //interpolation
@@ -70,12 +69,15 @@ __global__ void deformable_im2col_gpu_kernel(
         const int input_v = input_l * input_w * input_h;
         const int output_v = output_l * output_h * output_w;
         const int kernel_v = kernel_l * kernel_h * kernel_w;
-
-        const int w_out = index % output_w;
-        const int h_out = index / output_w % output_h;
-        const int l_out = index / output_w / output_h % output_l;
-        const int c_in = index / output_w / output_h / output_l % input_c;
-        const int b_in = index / output_w / output_h / output_l / input_c % batch_size;
+        //NL"H"W"CL'H'W'
+        const int w_kernel = index % kernel_w;
+        const int h_kernel = index / kernel_w % kernel_h;
+        const int l_kernel = index / kernel_w / kernel_h % kernel_l;
+        const int c_in = index / kernel_v % input_c;
+        const int w_out = index / kernel_v / input_c % output_w;
+        const int h_out = index / kernel_v / input_c / output_w % output_h;
+        const int l_out = index / kernel_v / input_c / output_w / output_h % output_l;
+        const int b_in = index / kernel_v / input_c / output_w / output_h / output_l % batch_size;
 
         const int l_in = l_out * stride_l - pad_l;
         const int h_in = h_out * stride_h - pad_h;
@@ -89,43 +91,38 @@ __global__ void deformable_im2col_gpu_kernel(
                                           l_out * output_h * output_w * input_c +
                                           h_out * output_w * input_c +
                                           w_out * input_c +
-                                          c_in) * kernel_v;
+                                          c_in) +
+                                         l_kernel * kernel_h * kernel_w +
+                                         h_kernel * kernel_w +
+                                         w_kernel;
         //NCLHW
         const DType *data_in_base_ptr = data_im +
                                         b_in * input_c * input_v +
-                                        c_in * input_v +
-                                        l_in * input_w * input_h +
-                                        h_in * input_w +
-                                        w_in;
-        //NGL"H"W"L'H'W'3
+                                        c_in * input_v;
+        //NGL'H'W'3L"H"W"
         const DType *data_offset_base_ptr = data_offset +
-                                            (b_in * deform_group * output_v +
-                                             g_off * output_v +
-                                             l_out * output_h * output_w +
-                                             h_out * output_w +
-                                             w_out) * kernel_v * 3;
+                                            (b_in * deform_group * kernel_v +
+                                             g_off * kernel_v +
+                                             l_kernel * kernel_h * kernel_w +
+                                             h_kernel * kernel_w +
+                                             w_kernel) * 3 * output_v;
 
-        for (int i = 0; i < kernel_l; ++i) {
-            for (int j = 0; j < kernel_h; ++j) {
-                for (int k = 0; k < kernel_w; ++k) {
-                    const int offset = i * kernel_h * kernel_w + k * kernel_w + k;
-                    const DType l_in_after = l_in + i + data_offset_base_ptr[offset * 3 + 0];
-                    const DType h_in_after = h_in + j + data_offset_base_ptr[offset * 3 + 1];
-                    const DType w_in_after = w_in + w + data_offset_base_ptr[offset * 3 + 2];
 
-                    DType val = 0;
-                    if (l_in_after >= 0 && h_in_after >= 0 && w_in_after >= 0 && l_in_after <= input_l - 1 &&
-                        h_in_after <= input_h - 1 && w_in_after <= input_w - 1) {
-                        //interpolation
-                        val = Tri_Linear(data_in_base_ptr, input_l, input_h, input_w,
-                                         l_in_after, h_in_after, w_in_after);
-                    }
-                    const DType *data_col_ptr = data_col_base_ptr + offset;
-                    *data_col_ptr = val;
-                }
-            }
+        const int offset = l_out * output_h * output_w +
+                           h_out * output_w +
+                           w_out;
+        const DType l_in_after = l_in + l_kernel + data_offset_base_ptr[offset + output_v * 0];
+        const DType h_in_after = h_in + h_kernel + data_offset_base_ptr[offset + output_v * 1];
+        const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[offset + output_v * 2];
+
+        DType val = 0;
+        if (l_in_after >= 0 && h_in_after >= 0 && w_in_after >= 0 && l_in_after <= input_l - 1 &&
+            h_in_after <= input_h - 1 && w_in_after <= input_w - 1) {
+            //interpolation
+            val = Tri_Linear(data_in_base_ptr, input_l, input_h, input_w,
+                             l_in_after, h_in_after, w_in_after);
         }
-
+        *data_col_ptr = val;
     }
 }
 
@@ -150,7 +147,7 @@ void deformable_im2col(cudaStream_t stream,
 //    int out_l = input_to_output(input_l, pad_l, kernel_l, stride_l);
 //    int out_h = input_to_output(input_h, pad_h, kernel_h, stride_h);
 //    int out_w = input_to_output(input_w, pad_w, kernel_w, stride_w);
-    int num_cuda_kernels = batch_size * input_c * out_l * out_h * out_w;
+    int num_cuda_kernels = batch_size * input_c * out_l * out_h * out_w * kernel_l * kernel_h * kernel_w;
     deformable_im2col_gpu_kernel << < get_cuda_blocks(num_cuda_kernels), 1024, 0, stream >> > (
             num_kernels, data_in, data_offset,
                     batch_size, input_c, input_l, input_h, input_w,
