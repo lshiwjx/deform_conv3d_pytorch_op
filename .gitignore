@@ -1,2 +1,4 @@
 /.idea/
 /cmake-build-debug/
+*.o
+/deform_conv3d_op/

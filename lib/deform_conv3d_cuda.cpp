@@ -6,7 +6,9 @@
 #include "TH/TH.h"
 #include "THC/THC.h"
 #include "deform_conv3d_cuda_kernel.h"
+#include "iostream"
 
+using namespace std;
 extern THCState *state;
 
 inline int input_to_output(int input, int pad, int kernel, int stride) {
@@ -28,8 +30,8 @@ void shape_check(THCState *state,
 
     int kernel_dim = weight->nDimension;
     check(kernel_dim == 5, "kernel dim");
-    long kernel_input_c = weight->size[0];
-    long kernel_output_c = weight->size[1];
+    long kernel_output_c = weight->size[0];
+    long kernel_input_c = weight->size[1];
     long kernel_l = weight->size[2];
     long kernel_h = weight->size[3];
     long kernel_w = weight->size[4];
@@ -59,6 +61,7 @@ void shape_check(THCState *state,
     long offset_b = offset->size[0];
     check(offset_b == input_b, "off batch");
     long offset_c = offset->size[1];
+//    cout<<offset_c<<" "<<input_c / channel_per_deformable_group * 3 * kernel_l * kernel_h * kernel_w<<endl;
     check(offset_c == input_c / channel_per_deformable_group * 3 * kernel_l * kernel_h * kernel_w, "off channel");
     long offset_l = offset->size[2];
     check(offset_l == output_l, "off l");
@@ -89,6 +92,7 @@ int deform_conv_forward_cuda(
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
         const int channel_per_deformable_group) {
+//    cout<<output->size[0]<<output->size[1]<<output->size[2];
     shape_check(state, input, weight, offset, output, columns,
                 pad_l, pad_h, pad_w, stride_l, stride_h, stride_w, channel_per_deformable_group);
     deformable_im2col(THCState_getCurrentStream(state),
@@ -104,12 +108,24 @@ int deform_conv_forward_cuda(
     int m = weight->size[0];
     int k = columns->size[0];
     int n = columns->size[1];
+//    std::cout<<m<<' '<<k<<' '<<n<<' '<<columns->nDimension<<' '<<weight->nDimension<<std::endl;
+//    for (int i = 0; i < 27; ++i) {
+//        std::cout<<THCudaTensor_data(state, weight)[i]<<std::endl;
+//        printf("%f ", THCudaTensor_data(state, weight)[i]);
+//    }
+//    cout<<weight->size[0]<<weight->size[1]<<endl;
+//    cout<<columns->size[0]<<columns->size[1]<<endl;
+//    cout<<output->size[0]<<output->size[1]<<output->size[2]<<output->size[3]<<output->size[4]<<endl;
     THCudaTensor_transpose(state, output, output, 0, 1);
-    THCudaBlas_Sgemm(state, 'n', 'n', m, n, k,
-                     1.0f, THCudaTensor_data(state, weight), m,
-                     THCudaTensor_data(state, columns), k,
-                     1.0f, THCudaTensor_data(state, output), m);
+//    cout<<output->size[0]<<output->size[1]<<output->size[2]<<output->size[3]<<output->size[4]<<endl;
+    THCudaBlas_Sgemm(state, 'n', 'n', n, m, k,
+                     1.0f, THCudaTensor_data(state, columns), n,
+                     THCudaTensor_data(state, weight), k,
+                     0.0f, THCudaTensor_data(state, output), n);
     THCudaTensor_transpose(state, output, output, 0, 1);
+//    cout<<output->size[0]<<output->size[1]<<output->size[2]<<output->size[3]<<output->size[4]<<endl;
+
+//    std::cout<<m<<' '<<k<<' '<<n<<' '<<output->nDimension<<' '<<weight->nDimension<<std::endl;
 
     return 1;
 }
@@ -129,17 +145,14 @@ int deform_conv_backward_input_cuda(
     long n = columns->size[1];
     long k = weight->size[0];
     THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
-    THCudaBlas_Sgemm(state, 't', 'n', m, n, k,
-                     1.0f, THCudaTensor_data(state, weight), k,
-                     THCudaTensor_data(state, grad_output), k,
-                     1.0f, THCudaTensor_data(state, columns), m);
+//    cout<<grad_output->size[0]<<" "<<grad_output->size[1]<<" "<<grad_output->size[2]<<" "
+//        <<grad_output->size[3]<<" "<<grad_output->size[4]<<std::endl;
+    THCudaBlas_Sgemm(state, 'n', 't', n, m, k,
+                     1.0f, THCudaTensor_data(state, grad_output), n,
+                     THCudaTensor_data(state, weight), m,
+                     0.0f, THCudaTensor_data(state, columns), n);
     THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
-//    printf(
-//            "test\n"
-//    );
-//    for (int i = 0; i < columns->storage->size; ++i) {
-//        printf("%f ", columns->storage->data[i]);
-//    }
+//    cout<<"test"<<columns->size[0]<<columns->size[1]<<endl;
     deformable_col2im_input(THCState_getCurrentStream(state),
                             THCudaTensor_data(state, columns),
                             THCudaTensor_data(state, offset),
@@ -169,10 +182,10 @@ int deform_conv_backward_offset_cuda(
     long n = columns->size[1];
     long k = weight->size[0];
     THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
-    THCudaBlas_Sgemm(state, 't', 'n', m, n, k,
-                     1.0f, THCudaTensor_data(state, weight), k,
-                     THCudaTensor_data(state, grad_output), k,
-                     1.0f, THCudaTensor_data(state, columns), m);
+    THCudaBlas_Sgemm(state, 'n', 't', n, m, k,
+                     1.0f, THCudaTensor_data(state, grad_output), n,
+                     THCudaTensor_data(state, weight), m,
+                     0.0f, THCudaTensor_data(state, columns), n);
     THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
     deformable_col2im_offset(THCState_getCurrentStream(state), THCudaTensor_data(state, columns),
                              THCudaTensor_data(state, input), THCudaTensor_data(state, offset),
@@ -203,17 +216,18 @@ int deform_conv_backward_weight_cuda(
                       grad_weight->size[2], grad_weight->size[3], grad_weight->size[4],
                       pad_l, pad_h, pad_w,
                       stride_l, stride_h, stride_w,
-                      channel_per_deformable_group, THCudaTensor_data(state, columns));
+                      channel_per_deformable_group,
+                      THCudaTensor_data(state, columns));
     //GEMM(TRANSA,TRANSB,M,N,K,ALPHA,A,LDA,B,LDB,BETA,C,LDC)
     //C := alpha*op( A )*op( B ) + beta*C,
-    THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
     int m = grad_weight->size[0];
     int k = columns->size[1];
-    int n = grad_weight->size[1];
-    THCudaBlas_Sgemm(state, 'n', 't', m, n, k,
-                     1.0f, THCudaTensor_data(state, grad_output), m,
-                     THCudaTensor_data(state, columns), n,
-                     1.0f, THCudaTensor_data(state, grad_weight), m);
+    int n = columns->size[0];
+    THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
+    THCudaBlas_Sgemm(state, 't', 'n', n, m, k,
+                     1.0f, THCudaTensor_data(state, columns), k,
+                     THCudaTensor_data(state, grad_output), k,
+                     1.0f, THCudaTensor_data(state, grad_weight), n);
     THCudaTensor_transpose(state, grad_output, grad_output, 0, 1);
     return 1;
 }

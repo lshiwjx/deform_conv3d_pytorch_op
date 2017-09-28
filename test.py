@@ -1,70 +1,52 @@
+# -*- coding: utf-8 -*-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
-import numpy as np
-import deform_conv3d_op as deform_conv
 
-from modules import ConvOffset3d
-from functions import ConvOffset3dFunction
+dtype = torch.FloatTensor
+# dtype = torch.cuda.FloatTensor # Uncomment this to run on GPU
 
-# num_deformable_group = 1
+# N is batch size; D_in is input dimension;
+# H is hidden dimension; D_out is output dimension.
+N, D_in, H, D_out = 64, 1000, 100, 10
 
-# N, inC, inL, inH, inW = 1, 3, 3, 7, 7
-# outC, outL, outH, outW = 4, 3,  7, 7
-# kL, kH, kW = 3, 3, 3
-# inpu = torch.FloatTensor([[[[[1., 1, 1]] * 3] * 3,[[[2., 2, 2]] * 3] * 3]*1]).cuda()
+# Create random Tensors to hold input and outputs, and wrap them in Variables.
+# Setting requires_grad=False indicates that we do not need to compute gradients
+# with respect to these Variables during the backward pass.
+x = Variable(torch.randn(N, D_in).type(dtype), requires_grad=False)
+y = Variable(torch.randn(N, D_out).type(dtype), requires_grad=False)
 
-inpu = torch.FloatTensor([[[[[1., 1, 1]] * 3] * 3] * 1] * 1).cuda()
-# inpu = torch.randn(1,1,3,7,7).cuda()
-offset = torch.FloatTensor([[[[[0.0001] * 3] * 3] * 3, [[[0.0001] * 3] * 3] * 3, [[[3.0001] * 3] * 3] * 3] * 1]).cuda()
-weight = torch.FloatTensor([[[[[1.0] * 1] * 1] * 1] * 1] * 1).cuda()
+# Create random Tensors for weights, and wrap them in Variables.
+# Setting requires_grad=True indicates that we want to compute gradients with
+# respect to these Variables during the backward pass.
+w1 = Variable(torch.randn(D_in, H).type(dtype), requires_grad=True)
+w2 = Variable(torch.randn(H, D_out).type(dtype), requires_grad=True)
 
-inputs = Variable(inpu).cuda()
-offsets = Variable(offset).cuda()
-weights = Variable(weight).cuda()
+learning_rate = 1e-6
+for t in range(500):
+    # Forward pass: compute predicted y using operations on Variables; these
+    # are exactly the same operations we used to compute the forward pass using
+    # Tensors, but we do not need to keep references to intermediate values since
+    # we are not implementing the backward pass by hand.
+    y_pred = x.mm(w1).clamp(min=0).mm(w2)
 
-# conv = nn.Conv3d(
-#     inC,
-#     num_deformable_group * 3 * kL * kH * kW,
-#     kernel_size=(kL, kH, kW),
-#     stride=(1, 1, 1),
-#     padding=(1, 1, 1),
-#     bias=False).cuda()
-# conv_offset3d = ConvOffset3d(inC, outC, (kL,kH, kW), stride=1, padding=1).cuda()
+    # Compute and print loss using operations on Variables.
+    # Now loss is a Variable of shape (1,) and loss.data is a Tensor of shape
+    # (1,); loss.data[0] is a scalar value holding the loss.
+    loss = (y_pred - y).pow(2).sum()
+    print(t, loss.data[0])
 
-# inputs = Variable(torch.randn(N, inC, inL, inH, inW).cuda())
-# offset = conv(inputs)
+    # Use autograd to compute the backward pass. This call will compute the
+    # gradient of loss with respect to all Variables with requires_grad=True.
+    # After this call w1.grad and w2.grad will be Variables holding the gradient
+    # of the loss with respect to w1 and w2 respectively.
+    loss.backward()
 
-# output = conv_offset3d(inputs, offset)
-# output.backward(output.data)
-padding = [0, 0, 0]
-stride = [1, 1, 1]
-conv_offset = ConvOffset3dFunction(stride, padding)
-output = conv_offset.forward(inpu, offset, weight)
-tmp = output.cpu().numpy()
+    # Update weights using gradient descent; w1.data and w2.data are Tensors,
+    # w1.grad and w2.grad are Variables and w1.grad.data and w2.grad.data are
+    # Tensors.
+    w1.data -= learning_rate * w1.grad.data
+    w2.data -= learning_rate * w2.grad.data
 
-grad_output = torch.FloatTensor([[[[[1.0] * 3] * 3] * 3] * 1] * 1).cuda()
-grad_input = inpu.new(*inpu.size()).zero_()
-grad_offset = offset.new(*offset.size()).zero_()
-bufs_ = [inpu.new(), inpu.new()]
-
-deform_conv.deform_conv_backward_input_cuda(
-    inpu, offset, grad_output, grad_input, grad_offset,
-    weight, bufs_[0],
-    weight.size(2), weight.size(3), weight.size(4), 1, 1, 1,
-    0, 0, 0, 1, 1, 1, 1)
-tmp3 = grad_input.cpu().numpy()
-tmp4 = grad_offset.cpu().numpy()
-
-grad_weight = weight.new(*weight.size()).zero_()
-deform_conv.deform_conv_backward_parameters_cuda(
-    inpu, offset, grad_output, grad_weight, bufs_[0],
-    bufs_[1],
-    weight.size(2), weight.size(3), weight.size(4), stride[0], stride[1], stride[2],
-    padding[0], padding[1], padding[2], dilation[0], dilation[1],
-    dilation[2], 1, 1)
-tmp5 = grad_weight.cpu().numpy()
-
-print(tmp, '\n', tmp3, '\n', tmp5, '\n', tmp4)
-print(output.size())
+    # Manually zero the gradients after updating weights
+    w1.grad.data.zero_()
+    w2.grad.data.zero_()

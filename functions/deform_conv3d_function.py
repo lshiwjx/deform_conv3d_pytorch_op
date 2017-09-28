@@ -32,7 +32,7 @@ class ConvOffset3dFunction(Function):
     def forward(self, input, offset, weight):
         self.save_for_backward(input, offset, weight)
 
-        output = torch.zeros(input.size(0), weight.size(1),
+        output = torch.zeros(input.size(0), weight.size(0),
                              self._to_output(input.size(2), weight.size(2), self.padding[0], self.stride[0]),
                              self._to_output(input.size(3), weight.size(3), self.padding[1], self.stride[1]),
                              self._to_output(input.size(4), weight.size(4), self.padding[2], self.stride[2])).cuda()
@@ -46,11 +46,13 @@ class ConvOffset3dFunction(Function):
         else:
             if not isinstance(input, torch.cuda.FloatTensor):
                 raise NotImplementedError
+            # output = torch.transpose(output,0,1)
             deform_conv3d_op.deform_conv_forward_cuda(
                 input, weight, offset, columns, output,
                 self.padding[0], self.padding[1], self.padding[2],
                 self.stride[0], self.stride[1], self.stride[2],
                 self.channel_per_group)
+            # output = torch.transpose(output,0,1)
         return output
 
     def backward(self, grad_output):
@@ -64,31 +66,35 @@ class ConvOffset3dFunction(Function):
             if not isinstance(grad_output, torch.cuda.FloatTensor):
                 raise NotImplementedError
             if self.needs_input_grad[0]:
-                grad_input = torch.zeros(*input.size())
+                grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
                 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4))
+                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4)) \
+                    .type(torch.FloatTensor).cuda()
+
                 deform_conv3d_op.deform_conv_backward_input_cuda(
-                    weight, offset, grad_output, columns, grad_offset,
+                    weight, offset, grad_output, columns, grad_input,
                     self.padding[0], self.padding[1], self.padding[2],
                     self.stride[0], self.stride[1], self.stride[2],
                     self.channel_per_group)
 
             if self.needs_input_grad[1]:
                 # grad_input = input.new(*input.size()).zero_()
-                grad_offset = torch.zeros(*offset.size())
+                grad_offset = torch.zeros(*offset.size()).cuda()
                 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4))
+                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(
+                                          4)).cuda()
 
                 deform_conv3d_op.deform_conv_backward_offset_cuda(
-                    input, weight, offset, columns, grad_offset,
+                    input, weight, offset, grad_output, columns, grad_offset,
                     self.padding[0], self.padding[1], self.padding[2],
                     self.stride[0], self.stride[1], self.stride[2],
                     self.channel_per_group)
 
             if self.needs_input_grad[2]:
-                grad_weight = torch.zeros(*weight.size())
+                grad_weight = torch.zeros(*weight.size()).cuda()
                 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4))
+                                      input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(
+                                          4)).cuda()
 
                 deform_conv3d_op.deform_conv_backward_weight_cuda(
                     input, offset, grad_output, columns, grad_weight,
@@ -98,5 +104,5 @@ class ConvOffset3dFunction(Function):
 
         return grad_input, grad_offset, grad_weight
 
-    def _to_output(self, input, kernel, pad, stride):
-        return int((input + 2 * pad - kernel) / stride + 1)
+    def _to_output(self, inpu, kernel, pad, stride):
+        return int((inpu + 2 * pad - kernel) / stride + 1)
