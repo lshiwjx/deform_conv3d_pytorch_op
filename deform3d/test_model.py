@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
-from modules import ConvOffset3d
+from deform3d.deform_conv3d_modules import ConvOffset3d
 
-batchsize = 1
+batchsize = 2
 c_in = 1
 c_out = 1
 in_l = in_h = in_w = 3

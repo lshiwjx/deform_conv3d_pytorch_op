@@ -1,11 +1,8 @@
-from gradcheck import gradcheck
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from deform3d.modules import ConvOffset3d
 from torch.autograd import Variable
 
-from modules import ConvOffset3d
+from deform3d.gradcheck import gradcheck
 
 batchsize = 1
 c_in = 1
