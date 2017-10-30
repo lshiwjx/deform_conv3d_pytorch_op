@@ -13,7 +13,7 @@ template<typename DType>
 __device__ DType Bi_Linear(const DType *bottom_data,
                            const int height, const int width,
                            const double h, const double w) {
-    
+
     //get the cube, the function floor can not be used in template
     int h_low = int(h);
     int w_low = int(w);//TODO
@@ -57,13 +57,14 @@ __global__ void deformable_im2col_gpu_kernel(
         const int input_v = input_w * input_h;
         const int output_v = output_h * output_w;
         const int kernel_v = kernel_h * kernel_w;
-        //NH"W"CH'W'
-        const int w_kernel = index % kernel_w;
-        const int h_kernel = index / kernel_w % kernel_h;
-        const int c_in = index / kernel_v % input_c;
-        const int w_out = index / kernel_v / input_c % output_w;
-        const int h_out = index / kernel_v / input_c / output_w % output_h;
-        const int b_in = index / kernel_v / input_c / output_v % batch_size;
+        //CH'W'NH"W"
+        const int w_out = index % output_w;
+        const int h_out = index / output_w % output_h;
+        const int b_in = index / output_v % batch_size;
+        const int w_kernel = index / output_v / batch_size % kernel_w;
+        const int h_kernel = index / output_v / batch_size / kernel_w % kernel_h;
+        const int c_in = index / output_v / batch_size / kernel_v % input_c;
+
 
         const int h_in = h_out * stride_h - pad_h;
         const int w_in = w_out * stride_w - pad_w;
@@ -71,14 +72,14 @@ __global__ void deformable_im2col_gpu_kernel(
         const int deform_group = input_c / channel_per_deformable_group;
 //        printf("%d %d %d %d %d %d %d %d %d\n",threadIdx.x,b_in,l_out,h_out,w_out,c_in,l_kernel,h_kernel,w_kernel);
 
-        //(NH"W") (CH'W')
+        //(CH'W')(NH"W")
         DType *data_col_base_ptr = data_col +
-                                   (b_in * output_v * input_c +
-                                    h_out * output_w * input_c +
-                                    w_out * input_c +
-                                    c_in) * kernel_v +
-                                   h_kernel * kernel_w +
-                                   w_kernel;
+                                   (c_in * kernel_v * batch_size +
+                                    h_kernel * output_w * batch_size +
+                                    w_kernel * batch_size +
+                                    b_in) * output_v +
+                                   h_out * output_w +
+                                   w_out;
         //NCHW
         const DType *data_in_base_ptr = data_im +
                                         b_in * input_c * input_v +
@@ -99,7 +100,7 @@ __global__ void deformable_im2col_gpu_kernel(
         const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[offset + output_v * 1];
 //        printf("%d %f %f %f\n",threadIdx.x,l_in_after,h_in_after,w_in_after);
 
-        DType val = 0;//TODO
+        DType val = 0;
         if (h_in_after > -1 && w_in_after > -1 &&
             h_in_after < input_h && w_in_after < input_w) {
             //interpolation
@@ -179,14 +180,15 @@ __global__ void deformable_col2im_input_gpu_kernel(
         const int g_off = c_in / channel_per_deformable_group;
         const int deform_group = input_c / channel_per_deformable_group;
 
-        //CH'W'  NH"W"
+        //CH'W' NH"W"
         const DType *data_col_base_ptr = data_col +
-                                         (b_in * output_v * input_c +
-                                          h_out * output_w * input_c +
-                                          w_out * input_c +
-                                          c_in) * kernel_v +
-                                         h_kernel * kernel_w +
-                                         w_kernel;
+                                         (c_in * kernel_v * batch_size +
+                                          h_kernel * output_w * batch_size +
+                                          w_kernel * batch_size +
+                                          b_in) * output_v +
+                                         h_out * output_w +
+                                         w_out;
+
         //NGH'W'3H"W"
         int offset_base = (b_in * deform_group * kernel_v +
                            g_off * kernel_v +
@@ -323,12 +325,12 @@ __global__ void deformable_col2im_offset_gpu_kernel(
             const int c_in = g_off * channel_per_deformable_group + i;
             //CH'W'  NH"W"
             const DType *data_col_base_ptr = data_col +
-                                             (b_in * output_v * input_c +
-                                              h_out * output_w * input_c +
-                                              w_out * input_c +
-                                              c_in) * kernel_v +
-                                             h_kernel * kernel_w +
-                                             w_kernel;
+                                             (c_in * kernel_v * batch_size +
+                                              h_kernel * output_w * batch_size +
+                                              w_kernel * batch_size +
+                                              b_in) * output_v +
+                                             h_out * output_w +
+                                             w_out;
             //NCHW
             const DType *data_in_base_ptr = data_im +
                                             b_in * input_c * input_v +

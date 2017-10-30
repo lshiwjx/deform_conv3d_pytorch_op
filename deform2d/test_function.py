@@ -6,9 +6,9 @@ from deform2d.deform_conv2d_functions import ConvOffset2dFunction as my
 from deform2d.functions.deform_conv import ConvOffset2dFunction
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-batchsize = 1
+batchsize = 2
 c_in = 2
-c_out = 1
+c_out = 3
 inpu = 5
 kernel = 3
 stri = 1
@@ -56,9 +56,9 @@ zb.deform_conv_backward_parameters_cuda(
 grad_weight_ = grad_weight.cpu().numpy()
 
 print('forward\n', tmp)
-# print('grad input\n', grad_input_)
-# print('grad weight\n', grad_weight_)
-# print('grad offset\n', grad_offset_)
+print('grad input\n', grad_input_)
+print('grad weight\n', grad_weight_)
+print('grad offset\n', grad_offset_)
 # ---------------------------------my------------------
 padding = [pad, pad]
 stride = [stri, stri]
@@ -88,6 +88,6 @@ deform_conv.deform_conv_backward_weight_cuda(
 grad_weight_ = grad_weight.cpu().numpy()
 
 print('forward\n', tmp)
-# print('grad input\n', grad_input_)
-# print('grad weight\n', grad_weight_)
-# print('grad offset\n', grad_offset_)
+print('grad input\n', grad_input_)
+print('grad weight\n', grad_weight_)
+print('grad offset\n', grad_offset_)

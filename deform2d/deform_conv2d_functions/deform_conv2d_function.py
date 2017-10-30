@@ -68,7 +68,7 @@ class ConvOffset2dFunction(Function):
 
             if self.needs_input_grad[2]:
                 grad_weight = torch.zeros(*weight.size()).type(torch.FloatTensor).cuda()
-                print(weight.size())
+
                 deform_conv2d_op.deform_conv_backward_weight_cuda(
                     input, offset, grad_output, columns, grad_weight,
                     self.padding[0], self.padding[1],

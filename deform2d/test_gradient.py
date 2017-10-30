@@ -1,11 +1,12 @@
 import torch
-# from deform2d.deform_conv2d_modules import ConvOffset2d
-# from deform2d.deform_conv2d_functions import ConvOffset2dFunction
+from deform2d.deform_conv2d_modules import ConvOffset2d
+from deform2d.deform_conv2d_functions import ConvOffset2dFunction
 from torch.autograd import Variable
 import os
 from deform2d.gradcheck import gradcheck
-from deform2d.modules import ConvOffset2d
-from deform2d.functions import conv_offset2d
+
+# from deform2d.modules import ConvOffset2d
+# from deform2d.functions import conv_offset2d
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 batchsize = 2
@@ -21,7 +22,7 @@ g_off = c_in // channel_per_group
 c_off = g_off * kernel * kernel * 2
 
 # conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group).cuda()
-# conv_offset2d = ConvOffset2dFunction((stri, stri), (pad, pad), channel_per_group)
+conv_offset2d = ConvOffset2dFunction((stri, stri), (pad, pad), channel_per_group)
 # conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group).cuda()
 
 # inputs = Variable(torch.FloatTensor([[[[1., 1., 1, 1, 1]] * 5] * c_in] * batchsize).type(torch.FloatTensor).cuda(),

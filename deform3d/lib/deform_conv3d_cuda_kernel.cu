@@ -21,9 +21,9 @@ __device__ DType Tri_Linear(const DType *bottom_data,
     int l_low = floor(l);
     int h_low = floor(h);
     int w_low = floor(w);
-    int l_high = l_low == l ? l_low : l_low + 1;
-    int h_high = h_low == h ? h_low : h_low + 1;
-    int w_high = w_low == w ? w_low : w_low + 1;
+    int l_high = (l >= length - 1 || l <= 0) ? l_low : l_low + 1;
+    int h_high = (h >= height - 1 || h <= 0) ? h_low : h_low + 1;
+    int w_high = (w >= width - 1 || w <= 0) ? w_low : w_low + 1;
 
     //the corner, format is lhw
     DType c000 = bottom_data[l_low * data_width_2d + h_low * data_width_1d + w_low];
@@ -73,15 +73,16 @@ __global__ void deformable_im2col_gpu_kernel(
         const int input_v = input_l * input_w * input_h;
         const int output_v = output_l * output_h * output_w;
         const int kernel_v = kernel_l * kernel_h * kernel_w;
-        //NL"H"W"CL'H'W'
-        const int w_kernel = index % kernel_w;
-        const int h_kernel = index / kernel_w % kernel_h;
-        const int l_kernel = index / kernel_w / kernel_h % kernel_l;
-        const int c_in = index / kernel_v % input_c;
-        const int w_out = index / kernel_v / input_c % output_w;
-        const int h_out = index / kernel_v / input_c / output_w % output_h;
-        const int l_out = index / kernel_v / input_c / output_w / output_h % output_l;
-        const int b_in = index / kernel_v / input_c / output_w / output_h / output_l % batch_size;
+        //CL'H'W'NL"H"W"
+        const int w_out = index % output_w;
+        const int h_out = index / output_w % output_h;
+        const int l_out = index / output_w / output_h % output_l;
+        const int b_in = index /  output_v % batch_size;
+        const int w_kernel = index / output_v / batch_size % kernel_w;
+        const int h_kernel = index / output_v / batch_size / kernel_w % kernel_h;
+        const int l_kernel = index / output_v / batch_size / kernel_w / kernel_h % kernel_l;
+        const int c_in = index / output_v / batch_size / kernel_v % input_c;
+
 
         const int l_in = l_out * stride_l - pad_l;
         const int h_in = h_out * stride_h - pad_h;
@@ -90,16 +91,16 @@ __global__ void deformable_im2col_gpu_kernel(
         const int deform_group = input_c / channel_per_deformable_group;
 //        printf("%d %d %d %d %d %d %d %d %d\n",threadIdx.x,b_in,l_out,h_out,w_out,c_in,l_kernel,h_kernel,w_kernel);
 
-        //(NL"H"W") (CL'H'W')
+        //(CL'H'W')(NL"H"W")
         DType *data_col_base_ptr = data_col +
-                                   (b_in * output_v * input_c +
-                                    l_out * output_h * output_w * input_c +
-                                    h_out * output_w * input_c +
-                                    w_out * input_c +
-                                    c_in) * kernel_v +
-                                   l_kernel * kernel_h * kernel_w +
-                                   h_kernel * kernel_w +
-                                   w_kernel;
+                                   (c_in * kernel_v * batch_size +
+                                    l_kernel * kernel_h * kernel_w * batch_size +
+                                    h_kernel * kernel_w * batch_size +
+                                    w_kernel * batch_size +
+                                    b_in) * output_v +
+                                   l_out * output_h * output_w +
+                                   h_out * output_w +
+                                   w_out;
         //NCLHW
         const DType *data_in_base_ptr = data_im +
                                         b_in * input_c * input_v +
@@ -125,8 +126,8 @@ __global__ void deformable_im2col_gpu_kernel(
 //        printf("%d %f %f %f\n",threadIdx.x,l_in_after,h_in_after,w_in_after);
 
         DType val = 0;
-        if (l_in_after >= 0 && h_in_after >= 0 && w_in_after >= 0 && l_in_after <= input_l - 1 &&
-            h_in_after <= input_h - 1 && w_in_after <= input_w - 1) {
+        if (l_in_after > -1 && h_in_after > -1 && w_in_after > -1 && l_in_after  input_l &&
+            h_in_after < input_h && w_in_after < input_w) {
             //interpolation
             val = Tri_Linear(data_in_base_ptr, input_l, input_h, input_w,
                              l_in_after, h_in_after, w_in_after);
@@ -210,14 +211,14 @@ __global__ void deformable_col2im_input_gpu_kernel(
 
         //CL'H'W'  NL"H"W"
         const DType *data_col_base_ptr = data_col +
-                                         (b_in * output_v * input_c +
-                                          l_out * output_h * output_w * input_c +
-                                          h_out * output_w * input_c +
-                                          w_out * input_c +
-                                          c_in) * kernel_v +
-                                         l_kernel * kernel_h * kernel_w +
-                                         h_kernel * kernel_w +
-                                         w_kernel;
+                                   (c_in * kernel_v * batch_size +
+                                    l_kernel * kernel_h * kernel_w * batch_size +
+                                    h_kernel * kernel_w * batch_size +
+                                    w_kernel * batch_size +
+                                    b_in) * output_v +
+                                   l_out * output_h * output_w +
+                                   h_out * output_w +
+                                   w_out;
 //        printf("%d %f\n", threadIdx.x, *data_col_base_ptr);
         //NGL'H'W'3L"H"W"
         int offset_base = (b_in * deform_group * kernel_v +
@@ -240,8 +241,8 @@ __global__ void deformable_col2im_input_gpu_kernel(
         const DType h_in_after = h_in + h_kernel + data_offset_base_ptr[1 * output_v + offset];
         const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[2 * output_v + offset];
 //        printf("%d %f %f %f\n", threadIdx.x,l_in_after,h_in_after,w_in_after);
-        if (l_in_after >= 0 && h_in_after >= 0 && w_in_after >= 0 && l_in_after <= input_l - 1 &&
-            h_in_after <= input_h - 1 && w_in_after <= input_w - 1) {
+        if (l_in_after > -1 && h_in_after > -1 && w_in_after > -1 && l_in_after < input_l &&
+            h_in_after < input_h && w_in_after < input_w) {
             //eight point around
             int l_low = floor(l_in_after);
             int h_low = floor(h_in_after);
@@ -399,16 +400,16 @@ __global__ void deformable_col2im_offset_gpu_kernel(
         DType val = 0;
         for (int i = 0; i < channel_per_deformable_group; ++i) {
             const int c_in = g_off * channel_per_deformable_group + i;
-            //CL'H'W'  NL"H"W"
+            //CL'H'W' NL"H"W"
             const DType *data_col_base_ptr = data_col +
-                                             (b_in * output_v * input_c +
-                                              l_out * output_h * output_w * input_c +
-                                              h_out * output_w * input_c +
-                                              w_out * input_c +
-                                              c_in) * kernel_v +
-                                             l_kernel * kernel_h * kernel_w +
-                                             h_kernel * kernel_w +
-                                             w_kernel;
+                                   (c_in * kernel_v * batch_size +
+                                    l_kernel * kernel_h * kernel_w * batch_size +
+                                    h_kernel * kernel_w * batch_size +
+                                    w_kernel * batch_size +
+                                    b_in) * output_v +
+                                   l_out * output_h * output_w +
+                                   h_out * output_w +
+                                   w_out;
 //            printf("%d %d %f\n", threadIdx.x, int_3, *data_col_base_ptr);
             //NCLHW
             const DType *data_in_base_ptr = data_im +
@@ -423,8 +424,8 @@ __global__ void deformable_col2im_offset_gpu_kernel(
             const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[2 * output_v + offset];
 //            printf("%d %f %f\n",threadIdx.x, data_offset_base_ptr[2 * output_v + offset],
 //                   data_offset_base_ptr[1 * output_v + offset]);
-            if (l_in_after >= 0 && h_in_after >= 0 && w_in_after >= 0 && l_in_after <= input_l - 1 &&
-                h_in_after <= input_h - 1 && w_in_after <= input_w - 1) {
+            if (l_in_after > -1 && h_in_after > -1 && w_in_after > -1 && l_in_after < input_l &&
+                h_in_after < input_h && w_in_after < input_w) {
                 //eight point around
                 int l_low = floor(l_in_after);
                 int h_low = floor(h_in_after);
