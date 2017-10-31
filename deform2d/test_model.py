@@ -5,11 +5,11 @@ import os
 from deform2d.deform_conv2d_modules import ConvOffset2d
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
-batchsize = 80
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+batchsize = 200
 c_in = 16
 c_out = 16
-inpu = 12
+inpu = 100
 kernel = 3
 stri = 1
 pad = 0

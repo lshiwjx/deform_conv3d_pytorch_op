@@ -128,56 +128,9 @@ int deform_conv_forward_cuda(
 }
 
 
-int deform_conv_backward_input_cuda(
-        THCudaTensor *weight, THCudaTensor *offset, THCudaTensor *grad_output,
-        THCudaTensor *columns, THCudaTensor *grad_input,
-        const int pad_h, const int pad_w,
-        const int stride_h, const int stride_w,
-        const int channel_per_deformable_group) {
-    shape_check(state, grad_input, weight, offset, grad_output, columns,
-                pad_h, pad_w, stride_h, stride_w, channel_per_deformable_group);
-                
-    THCudaTensor *grad_input_n = THCudaTensor_new(state);
-    THCudaTensor *offset_n = THCudaTensor_new(state);
-    THCudaTensor *grad_output_n = THCudaTensor_new(state);
-    
-    for(int i=0;i<grad_input->size[0];i++){
-        THCudaTensor_select(state, grad_input_n, grad_input, 0, i);
-        THCudaTensor_select(state, offset_n, offset, 0, i);
-        THCudaTensor_select(state, grad_output_n, grad_output, 0, i);
-        
-        //Wt * O = C
-        long m = columns->size[0];
-        long n = columns->size[1];
-        long k = weight->size[0];
-    
-        THCudaBlas_Sgemm(state, 'n', 't', n, m, k,
-                         1.0f, THCudaTensor_data(state, grad_output_n), n,
-                         THCudaTensor_data(state, weight), m,
-                         0.0f, THCudaTensor_data(state, columns), n);
-                         
-        deformable_col2im_input(THCState_getCurrentStream(state),
-                                THCudaTensor_data(state, columns),
-                                THCudaTensor_data(state, offset_n),
-                                grad_input->size[1], grad_input->size[2], grad_input->size[3],
-                                grad_output->size[2], grad_output->size[3],
-                                weight->size[2], weight->size[3],
-                                pad_h, pad_w,
-                                stride_h, stride_w, channel_per_deformable_group,
-                                THCudaTensor_data(state, grad_input_n));
-    }
-    
-    THCudaTensor_free(state, grad_input_n);
-    THCudaTensor_free(state, offset_n);
-    THCudaTensor_free(state, grad_output_n);
-    
-
-    return 1;
-}
-
-int deform_conv_backward_offset_cuda(
+int deform_conv_backward_input_offset_cuda(
         THCudaTensor *input, THCudaTensor *weight, THCudaTensor *offset, THCudaTensor *grad_output,
-        THCudaTensor *columns, THCudaTensor *grad_offset,
+        THCudaTensor *columns, THCudaTensor *grad_input, THCudaTensor *grad_offset,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int channel_per_deformable_group) {
@@ -188,12 +141,14 @@ int deform_conv_backward_offset_cuda(
 
     THCudaTensor *input_n = THCudaTensor_new(state);
     THCudaTensor *offset_n = THCudaTensor_new(state);
+    THCudaTensor *grad_input_n = THCudaTensor_new(state);
     THCudaTensor *grad_offset_n = THCudaTensor_new(state);
     THCudaTensor *grad_output_n = THCudaTensor_new(state);
     
     for(int i=0;i<input->size[0];i++){
         THCudaTensor_select(state, input_n, input, 0, i);
         THCudaTensor_select(state, offset_n, offset, 0, i);
+        THCudaTensor_select(state, grad_input_n, grad_input, 0, i);
         THCudaTensor_select(state, grad_offset_n, grad_offset, 0, i);
         THCudaTensor_select(state, grad_output_n, grad_output, 0, i);
         
@@ -213,10 +168,20 @@ int deform_conv_backward_offset_cuda(
                                  pad_h, pad_w,
                                  stride_h, stride_w,
                                  channel_per_deformable_group, THCudaTensor_data(state, grad_offset_n));
+        deformable_col2im_input(THCState_getCurrentStream(state),
+                                THCudaTensor_data(state, columns),
+                                THCudaTensor_data(state, offset_n),
+                                grad_input->size[1], grad_input->size[2], grad_input->size[3],
+                                grad_output->size[2], grad_output->size[3],
+                                weight->size[2], weight->size[3],
+                                pad_h, pad_w,
+                                stride_h, stride_w, channel_per_deformable_group,
+                                THCudaTensor_data(state, grad_input_n));
     }
     
     THCudaTensor_free(state, input_n);
     THCudaTensor_free(state, offset_n);
+    THCudaTensor_free(state, grad_input_n);
     THCudaTensor_free(state, grad_offset_n);
     THCudaTensor_free(state, grad_output_n);
 

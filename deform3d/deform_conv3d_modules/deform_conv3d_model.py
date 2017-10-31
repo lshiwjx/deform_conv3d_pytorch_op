@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.modules.module import Module
 from torch.nn.modules.utils import _triple
 
-from deform3d.deform_conv3d_functions import conv_offset3d
+from deform3d.deform_conv3d_functions import ConvOffset3dFunction
 
 
 class ConvOffset3d(Module):
@@ -24,17 +24,8 @@ class ConvOffset3d(Module):
         self.padding = _triple(padding)
         self.channel_per_group = channel_per_group
 
-        self.weight = nn.Parameter(
-            torch.Tensor(out_channels, in_channels, *self.kernel_size))
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        n = self.in_channels
-        for k in self.kernel_size:
-            n *= k
-        stdv = 1. / math.sqrt(n)
-        self.weight.data.uniform_(-stdv, stdv)
+        self.weight = nn.Parameter(torch.FloatTensor(out_channels, in_channels, *self.kernel_size))
+        nn.init.kaiming_normal(self.weight.data, mode='fan_out')
 
     def forward(self, input, offset):
-        return conv_offset3d(input, offset, self.weight,
-                             self.stride, self.padding, self.channel_per_group)
+        return ConvOffset3dFunction(self.stride, self.padding, self.channel_per_group)(input, offset, self.weight)

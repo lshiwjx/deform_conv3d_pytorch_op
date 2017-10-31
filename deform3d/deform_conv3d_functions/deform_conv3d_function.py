@@ -5,24 +5,8 @@ from torch.nn.modules.utils import _triple
 from deform3d import deform_conv3d_op
 
 
-def conv_offset3d(input,
-                  offset,
-                  weight,
-                  stride=1,
-                  padding=0,
-                  channel_per_group=1):
-    if input is not None and input.dim() != 5:
-        raise ValueError(
-            "Expected 5D tensor as input, got {}D tensor instead.".format(
-                input.dim()))
-
-    f = ConvOffset3dFunction(
-        _triple(stride), _triple(padding), channel_per_group)
-    return f(input, offset, weight)
-
-
 class ConvOffset3dFunction(Function):
-    def __init__(self, stride, padding, channel_per_group=1):
+    def __init__(self, stride, padding, channel_per_group):
         super(ConvOffset3dFunction, self).__init__()
         self.stride = stride
         self.padding = padding
@@ -46,15 +30,11 @@ class ConvOffset3dFunction(Function):
         else:
             if not isinstance(input, torch.cuda.FloatTensor):
                 raise NotImplementedError
-            # output = torch.transpose(output,0,1)
             deform_conv3d_op.deform_conv_forward_cuda(
                 input, weight, offset, columns, output,
                 self.padding[0], self.padding[1], self.padding[2],
                 self.stride[0], self.stride[1], self.stride[2],
                 self.channel_per_group)
-            # output = torch.transpose(output,0,1)
-            # output = torch.add(output, bias)
-        # del columns
         return output
 
     def backward(self, grad_output):
@@ -70,36 +50,18 @@ class ConvOffset3dFunction(Function):
             columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
                                   input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4)) \
                 .type(torch.FloatTensor).cuda()
-            if self.needs_input_grad[0]:
+            if self.needs_input_grad[0] or self.needs_input_grad[1]:
                 grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
-                # columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                #                       input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(4)) \
-                # .type(torch.FloatTensor).cuda()
-
-                deform_conv3d_op.deform_conv_backward_input_cuda(
-                    weight, offset, grad_output, columns, grad_input,
-                    self.padding[0], self.padding[1], self.padding[2],
-                    self.stride[0], self.stride[1], self.stride[2],
-                    self.channel_per_group)
-
-            if self.needs_input_grad[1]:
-                # grad_input = input.new(*input.size()).zero_()
                 grad_offset = torch.zeros(*offset.size()).cuda()
-                # columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                #                       input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(
-                #                           4)).cuda()
 
-                deform_conv3d_op.deform_conv_backward_offset_cuda(
-                    input, weight, offset, grad_output, columns, grad_offset,
+                deform_conv3d_op.deform_conv_backward_input_offset_cuda(
+                    input, weight, offset, grad_output, columns, grad_input, grad_offset,
                     self.padding[0], self.padding[1], self.padding[2],
                     self.stride[0], self.stride[1], self.stride[2],
                     self.channel_per_group)
 
             if self.needs_input_grad[2]:
                 grad_weight = torch.zeros(*weight.size()).cuda()
-                # columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                #                       input.size(0) * grad_output.size(2) * grad_output.size(3) * grad_output.size(
-                #                           4)).cuda()
 
                 deform_conv3d_op.deform_conv_backward_weight_cuda(
                     input, offset, grad_output, columns, grad_weight,

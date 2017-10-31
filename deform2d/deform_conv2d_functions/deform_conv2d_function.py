@@ -48,20 +48,12 @@ class ConvOffset2dFunction(Function):
             columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3),
                                   grad_output.size(2) * grad_output.size(3)) \
                 .type(torch.FloatTensor).cuda()
-            if self.needs_input_grad[0]:
+            if self.needs_input_grad[0] or self.needs_input_grad[1]:
                 grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
-
-                deform_conv2d_op.deform_conv_backward_input_cuda(
-                    weight, offset, grad_output, columns, grad_input,
-                    self.padding[0], self.padding[1],
-                    self.stride[0], self.stride[1],
-                    self.channel_per_group)
-
-            if self.needs_input_grad[1]:
                 grad_offset = torch.zeros(*offset.size()).type(torch.FloatTensor).cuda()
 
-                deform_conv2d_op.deform_conv_backward_offset_cuda(
-                    input, weight, offset, grad_output, columns, grad_offset,
+                deform_conv2d_op.deform_conv_backward_input_offset_cuda(
+                    input, weight, offset, grad_output, columns, grad_input, grad_offset,
                     self.padding[0], self.padding[1],
                     self.stride[0], self.stride[1],
                     self.channel_per_group)
