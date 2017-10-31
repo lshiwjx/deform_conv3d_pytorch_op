@@ -5,10 +5,10 @@ import os
 from deform2d.deform_conv2d_functions import ConvOffset2dFunction as my
 from deform2d.functions.deform_conv import ConvOffset2dFunction
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 batchsize = 2
 c_in = 2
-c_out = 3
+c_out = 2
 inpu = 5
 kernel = 3
 stri = 1
@@ -18,11 +18,15 @@ channel_per_group = 1
 
 g_off = c_in // channel_per_group
 g_c = g_off * kernel * kernel * 2
-inpu = torch.FloatTensor([[[[1.0, 2, 3, 4, 1]] * inpu] * c_in] * batchsize).cuda()
-offset = torch.FloatTensor([[[[0.000] * out] * out,
-                             [[0.000] * out] * out]
-                            * kernel * kernel * g_off] * batchsize).cuda()
-weight = torch.FloatTensor([[[[1.0, 2, 3]] * kernel] * c_in] * c_out).cuda()
+# inpu = torch.FloatTensor([[[[1.0]* inpu] * inpu] * c_in] * batchsize).cuda()
+# offset = torch.FloatTensor([[[[0.000] * out] * out,
+#                              [[0.000] * out] * out]
+#                             * kernel * kernel * g_off] * batchsize).cuda()
+# weight = torch.FloatTensor([[[[1.0]* kernel] * kernel] * c_in] * c_out).cuda()
+inpu = torch.rand(batchsize, c_in, inpu, inpu).type(torch.FloatTensor).cuda()
+offset = torch.rand(batchsize, g_c, out, out).type(torch.FloatTensor).cuda()
+weight = torch.rand(c_out, c_in, kernel, kernel).type(torch.FloatTensor).cuda()
+
 tmp = offset.cpu().numpy()
 
 padding = [pad, pad]
@@ -34,7 +38,7 @@ tmp = output.cpu().numpy()
 
 grad_output = torch.FloatTensor([[[[1.0] * out] * out] * c_out] * batchsize).cuda()
 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3),
-                      inpu.size(0) * output.size(2) * output.size(3)).cuda()
+                      output.size(2) * output.size(3)).cuda()
 bufs_ = [inpu.new(), inpu.new()]
 grad_input = inpu.new(*inpu.size()).zero_()
 grad_offset = offset.new(*offset.size()).zero_()
@@ -55,9 +59,9 @@ zb.deform_conv_backward_parameters_cuda(
     pad, pad, 1, 1, g_off, 1)
 grad_weight_ = grad_weight.cpu().numpy()
 
-print('forward\n', tmp)
-print('grad input\n', grad_input_)
-print('grad weight\n', grad_weight_)
+# print('forward\n', tmp)
+# print('grad input\n', grad_input_)
+# print('grad weight\n', grad_weight_)
 print('grad offset\n', grad_offset_)
 # ---------------------------------my------------------
 padding = [pad, pad]
@@ -68,7 +72,7 @@ tmp = output.cpu().numpy()
 
 grad_output = torch.FloatTensor([[[[1.0] * out] * out] * c_out] * batchsize).cuda()
 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3),
-                      inpu.size(0) * output.size(2) * output.size(3)).cuda()
+                      output.size(2) * output.size(3)).cuda()
 
 grad_input = inpu.new(*inpu.size()).zero_()
 deform_conv.deform_conv_backward_input_cuda(
@@ -87,7 +91,7 @@ deform_conv.deform_conv_backward_weight_cuda(
     pad, pad, stri, stri, channel_per_group)
 grad_weight_ = grad_weight.cpu().numpy()
 
-print('forward\n', tmp)
-print('grad input\n', grad_input_)
-print('grad weight\n', grad_weight_)
+# print('forward\n', tmp)
+# print('grad input\n', grad_input_)
+# print('grad weight\n', grad_weight_)
 print('grad offset\n', grad_offset_)

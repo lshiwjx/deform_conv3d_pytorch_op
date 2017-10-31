@@ -5,16 +5,16 @@ import os
 from deform2d.deform_conv2d_modules import ConvOffset2d
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-batchsize = 2
-c_in = 2
-c_out = 2
-inpu = 5
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+batchsize = 80
+c_in = 16
+c_out = 16
+inpu = 12
 kernel = 3
 stri = 1
-pad = 1
+pad = 0
 out = int((inpu + 2 * pad - kernel) / stri + 1)
-channel_per_group = 3
+channel_per_group = 1
 
 conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group)
 

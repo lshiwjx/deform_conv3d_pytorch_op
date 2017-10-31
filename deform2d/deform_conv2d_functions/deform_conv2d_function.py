@@ -20,7 +20,7 @@ class ConvOffset2dFunction(Function):
                              self._to_output(input.size(3), weight.size(3), self.padding[1], self.stride[1])) \
             .type(torch.FloatTensor).cuda()
         columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3),
-                              input.size(0) * output.size(2) * output.size(3)).type(torch.FloatTensor).cuda()
+                              output.size(2) * output.size(3)).type(torch.FloatTensor).cuda()
 
         if not input.is_cuda:
             raise NotImplementedError
@@ -46,7 +46,7 @@ class ConvOffset2dFunction(Function):
             if not isinstance(grad_output, torch.cuda.FloatTensor):
                 raise NotImplementedError
             columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3),
-                                  input.size(0) * grad_output.size(2) * grad_output.size(3)) \
+                                  grad_output.size(2) * grad_output.size(3)) \
                 .type(torch.FloatTensor).cuda()
             if self.needs_input_grad[0]:
                 grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
