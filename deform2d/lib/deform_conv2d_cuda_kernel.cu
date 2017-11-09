@@ -105,7 +105,7 @@ __global__ void deformable_im2col_gpu_kernel(
         }
         *data_col_base_ptr = val;
 //        if (threadIdx.x==0)
-//            printf("%d %d %d %f\n",threadIdx.x,h_out,w_out ,val);
+        printf("%d %f %f %f\n",threadIdx.x,h_in_after,w_in_after ,val);
     }
 }
 

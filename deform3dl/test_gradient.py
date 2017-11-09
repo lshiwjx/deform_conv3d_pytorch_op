@@ -1,10 +1,10 @@
 import torch
-from deform3d.deform_conv3d_modules import ConvOffset3d
+from deform3dl.deform_conv3dl_modules import ConvOffset3d
 from torch.autograd import Variable
 import os
-from deform3d.gradcheck import gradcheck
+from deform3dl.gradcheck import gradcheck
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 batchsize = 2
 c_in = 2
@@ -15,7 +15,7 @@ out_l = out_h = out_w = 3
 stri = 1
 pad = 0
 channel_per_group = 1
-c_off = c_in // channel_per_group * kernel_l * kernel_h * kernel_w * 3
+c_off = c_in // channel_per_group
 
 conv_offset3d = ConvOffset3d(c_in, c_out, kernel_l, stri, pad, channel_per_group).cuda()
 

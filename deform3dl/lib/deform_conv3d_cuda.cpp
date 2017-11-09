@@ -62,7 +62,7 @@ void shape_check(THCState *state,
     check(offset_b == input_b, "off batch");
     long offset_c = offset->size[1];
 //    cout<<offset_c<<" "<<input_c / channel_per_deformable_group * 3 * kernel_l * kernel_h * kernel_w<<endl;
-    check(offset_c == input_c / channel_per_deformable_group * 3 * kernel_l * kernel_h * kernel_w, "off channel");
+    check(offset_c == input_c / channel_per_deformable_group, "off channel");
     long offset_l = offset->size[2];
     check(offset_l == output_l, "off l");
     long offset_h = offset->size[3];

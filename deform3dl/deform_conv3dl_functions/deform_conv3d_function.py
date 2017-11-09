@@ -2,7 +2,7 @@ import torch
 from torch.autograd import Function
 from torch.nn.modules.utils import _triple
 
-from deform3d import deform_conv3d_op
+from deform3dl import deform_conv3dl_op
 
 
 class ConvOffset3dFunction(Function):
@@ -30,7 +30,7 @@ class ConvOffset3dFunction(Function):
         else:
             if not isinstance(input, torch.cuda.FloatTensor):
                 raise NotImplementedError
-            deform_conv3d_op.deform_conv_forward_cuda(
+            deform_conv3dl_op.deform_conv_forward_cuda(
                 input, weight, offset, columns, output,
                 self.padding[0], self.padding[1], self.padding[2],
                 self.stride[0], self.stride[1], self.stride[2],
@@ -54,7 +54,7 @@ class ConvOffset3dFunction(Function):
                 grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
                 grad_offset = torch.zeros(*offset.size()).cuda()
 
-                deform_conv3d_op.deform_conv_backward_input_offset_cuda(
+                deform_conv3dl_op.deform_conv_backward_input_offset_cuda(
                     input, weight, offset, grad_output, columns, grad_input, grad_offset,
                     self.padding[0], self.padding[1], self.padding[2],
                     self.stride[0], self.stride[1], self.stride[2],
@@ -63,7 +63,7 @@ class ConvOffset3dFunction(Function):
             if self.needs_input_grad[2]:
                 grad_weight = torch.zeros(*weight.size()).cuda()
 
-                deform_conv3d_op.deform_conv_backward_weight_cuda(
+                deform_conv3dl_op.deform_conv_backward_weight_cuda(
                     input, offset, grad_output, columns, grad_weight,
                     self.padding[0], self.padding[1], self.padding[2],
                     self.stride[0], self.stride[1], self.stride[2],
