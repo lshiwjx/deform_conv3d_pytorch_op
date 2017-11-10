@@ -8,39 +8,35 @@
 //#include "THC/THC.h"
 //#include "TH/TH.h"
 
-template<typename DType>
 void deformable_im2col(cudaStream_t stream,
-                       const DType *data_in, const DType *data_offset,
+                       const float *data_in, const float *data_offset,
                        const int input_c,
                        const int input_h, const int input_w,
                        const int output_h, const int output_w,
                        const int kernel_h, const int kernel_w,
                        const int pad_h, const int pad_w,
                        const int stride_h, const int stride_w,
-                       const int channel_per_deformable_group, DType *data_col);
+                       const int channel_per_deformable_group, float *data_col);
 
 
-template<typename DType>
 void deformable_col2im_input(cudaStream_t stream,
-                             const DType *data_col, const DType *data_offset,
+                             const float *data_col, const float *data_offset,
                              const int input_c,
                              const int input_h, const int input_w,
                              const int output_h, const int output_w,
                              const int kernel_h, const int kernel_w,
                              const int pad_h, const int pad_w,
                              const int stride_h, const int stride_w,
-                             const int channel_per_deformable_group, DType *grad_im);
+                             const int channel_per_deformable_group, float *grad_im);
 
-template<typename DType>
-void deformable_col2im_offset(cudaStream_t stream, const DType *data_col,
-                              const DType *data_im, const DType *data_offset,
-                              const int input_c,
-                              const int input_h, const int input_w,
+
+void deformable_col2im_offset(cudaStream_t stream,
+                              const float *data_col, const float *data_im, const float *data_offset,
+                              const int input_c, const int input_h, const int input_w,
                               const int output_h, const int output_w,
                               const int kernel_h, const int kernel_w,
                               const int pad_h, const int pad_w,
                               const int stride_h, const int stride_w,
                               const int channel_per_deformable_group,
-                              DType *grad_offset);
-
+                              float *grad_offset);
 //#endif //DEFORM3D_NEW_PYTORCH_DEFORM_CONV3D_CUDA_BACKWARD_CU_H

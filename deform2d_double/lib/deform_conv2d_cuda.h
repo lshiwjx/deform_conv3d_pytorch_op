@@ -10,29 +10,22 @@
 //#include "deform_conv3d_cuda_kernel.h"
 
 int deform_conv_forward_cuda(
-        THCudaTensor *input, THCudaTensor *weight, THCudaTensor *offset,
-        THCudaTensor *columns, THCudaTensor *output,
+        THCudaDoubleTensor *input, THCudaDoubleTensor *weight, THCudaDoubleTensor *offset,
+        THCudaDoubleTensor *columns, THCudaDoubleTensor *output,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int channel_per_deformable_group);
 
-int deform_conv_backward_input_cuda(
-        THCudaTensor *weight, THCudaTensor *offset, THCudaTensor *grad_output,
-        THCudaTensor *columns, THCudaTensor *grad_input,
-        const int pad_h, const int pad_w,
-        const int stride_h, const int stride_w,
-        const int channel_per_deformable_group);
-
-int deform_conv_backward_offset_cuda(
-        THCudaTensor *input, THCudaTensor *weight, THCudaTensor *offset, THCudaTensor *grad_output,
-        THCudaTensor *columns, THCudaTensor *grad_offset,
+int deform_conv_backward_input_offset_cuda(
+        THCudaDoubleTensor *input, THCudaDoubleTensor *weight, THCudaDoubleTensor *offset, THCudaDoubleTensor *grad_output,
+        THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_input, THCudaDoubleTensor *grad_offset,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int channel_per_deformable_group);
 
 int deform_conv_backward_weight_cuda(
-        THCudaTensor *input, THCudaTensor *offset, THCudaTensor *grad_output,
-        THCudaTensor *columns, THCudaTensor *grad_weight,
+        THCudaDoubleTensor *input, THCudaDoubleTensor *offset, THCudaDoubleTensor *grad_output,
+        THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_weight,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int channel_per_deformable_group);

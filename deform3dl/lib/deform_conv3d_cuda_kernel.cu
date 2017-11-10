@@ -12,7 +12,7 @@
 template<typename DType>
 __device__ DType Tri_Linear(const DType *bottom_data,
                             const int length, const int height, const int width,
-                            const double l, const int h, const int w) {
+                            const float l, const int h, const int w) {
     //length and area
     const int data_width_1d = width;
     const int data_width_2d = height * width;
@@ -104,16 +104,16 @@ inline int get_cuda_blocks(const int num_kernel) {
     return (num_kernel + THREAD_PRE_BLOCK - 1) / THREAD_PRE_BLOCK;
 }
 
-template<typename DType>
+//template<typename DType>
 void deformable_im2col(cudaStream_t stream,
-                       const DType *data_in, const DType *data_offset,
+                       const float *data_in, const float *data_offset,
                        const int input_c,
                        const int input_l, const int input_h, const int input_w,
                        const int output_l, const int output_h, const int output_w,
                        const int kernel_l, const int kernel_h, const int kernel_w,
                        const int pad_l, const int pad_h, const int pad_w,
                        const int stride_l, const int stride_h, const int stride_w,
-                       const int channel_per_deformable_group, DType *data_col) {
+                       const int channel_per_deformable_group, float *data_col) {
     int num_kernels = output_l * output_h * output_w * input_c * kernel_l * kernel_h * kernel_w;
     deformable_im2col_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
             num_kernels, data_in, data_offset,
@@ -126,16 +126,6 @@ void deformable_im2col(cudaStream_t stream,
                     data_col);
 }
 
-template
-void deformable_im2col<float>(cudaStream_t stream,
-                              const float *data_in, const float *data_offset,
-                              const int input_c,
-                              const int input_l, const int input_h, const int input_w,
-                              const int output_l, const int output_h, const int output_w,
-                              const int kernel_l, const int kernel_h, const int kernel_w,
-                              const int pad_l, const int pad_h, const int pad_w,
-                              const int stride_l, const int stride_h, const int stride_w,
-                              const int channel_per_deformable_group, float *data_col);
 
 //---------------------------------------------backward to input---------------------------------------------------
 template<typename DType>
@@ -217,16 +207,16 @@ __global__ void deformable_col2im_input_gpu_kernel(
 }
 
 
-template<typename DType>
+//template<typename DType>
 void deformable_col2im_input(cudaStream_t stream,
-                             const DType *data_col, const DType *data_offset,
+                             const float *data_col, const float *data_offset,
                              const int input_c,
                              const int input_l, const int input_h, const int input_w,
                              const int output_l, const int output_h, const int output_w,
                              const int kernel_l, const int kernel_h, const int kernel_w,
                              const int pad_l, const int pad_h, const int pad_w,
                              const int stride_l, const int stride_h, const int stride_w,
-                             const int channel_per_deformable_group, DType *grad_im) {
+                             const int channel_per_deformable_group, float *grad_im) {
     const int num_kernels = output_l * output_h * output_w * input_c * kernel_l * kernel_h * kernel_w;
     deformable_col2im_input_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
             num_kernels, data_col, data_offset,
@@ -239,19 +229,7 @@ void deformable_col2im_input(cudaStream_t stream,
     );
 }
 
-template
-void deformable_col2im_input<float>(cudaStream_t stream,
-                                    const float *data_col, const float *data_offset,
-                                    const int input_c,
-                                    const int input_l, const int input_h, const int input_w,
-                                    const int output_l, const int output_h, const int output_w,
-                                    const int kernel_l, const int kernel_h, const int kernel_w,
-                                    const int pad_l, const int pad_h, const int pad_w,
-                                    const int stride_l, const int stride_h, const int stride_w,
-                                    const int channel_per_deformable_group, float *grad_im);
-
 //--------------------------------------------------backward to offset---------------------------------------------
-
 
 template<typename DType>
 __global__ void deformable_col2im_offset_gpu_kernel(
@@ -333,9 +311,9 @@ __global__ void deformable_col2im_offset_gpu_kernel(
 }
 
 
-template<typename DType>
+//template<typename DType>
 void deformable_col2im_offset(cudaStream_t stream,
-                              const DType *data_col, const DType *data_im, const DType *data_offset,
+                              const float *data_col, const float *data_im, const float *data_offset,
                               const int input_c,
                               const int input_l, const int input_h, const int input_w,
                               const int output_l, const int output_h, const int output_w,
@@ -343,7 +321,7 @@ void deformable_col2im_offset(cudaStream_t stream,
                               const int pad_l, const int pad_h, const int pad_w,
                               const int stride_l, const int stride_h, const int stride_w,
                               const int channel_per_deformable_group,
-                              DType *grad_offset) {
+                              float *grad_offset) {
     const int num_kernels = (input_c / channel_per_deformable_group) * output_l * output_h * output_w;
     deformable_col2im_offset_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
             num_kernels, data_col, data_im, data_offset,
@@ -355,16 +333,3 @@ void deformable_col2im_offset(cudaStream_t stream,
                     channel_per_deformable_group, grad_offset
     );
 }
-
-
-template
-void deformable_col2im_offset<float>(cudaStream_t stream,
-                                     const float *data_col, const float *data_im, const float *data_offset,
-                                     const int input_c,
-                                     const int input_l, const int input_h, const int input_w,
-                                     const int output_l, const int output_h, const int output_w,
-                                     const int kernel_l, const int kernel_h, const int kernel_w,
-                                     const int pad_l, const int pad_h, const int pad_w,
-                                     const int stride_l, const int stride_h, const int stride_w,
-                                     const int channel_per_deformable_group,
-                                     float *grad_offset);

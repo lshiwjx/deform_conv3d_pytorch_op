@@ -4,22 +4,31 @@ from deform2d.deform_conv2d_functions import ConvOffset2dFunction
 from torch.autograd import Variable
 import os
 from deform2d.gradcheck import gradcheck
-
+import torch.nn.functional as F
 # from deform2d.modules import ConvOffset2d
 # from deform2d.functions import conv_offset2d
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 batchsize = 2
-c_in = 1
-c_out = 1
-inpu = 5
-kernel = 3
-stri = 1
-pad = 0
+c_in = 2
+c_out = 3
+inpu = 7
+kernel = 1
+stri = 2
+pad = 1
 out = int((inpu + 2 * pad - kernel) / stri + 1)
-channel_per_group = 1
+channel_per_group = 2
 g_off = c_in // channel_per_group
 c_off = g_off * kernel * kernel * 2
+
+# s = Variable(torch.rand(batchsize,2,3).type(torch.FloatTensor).cuda(), requires_grad=True)
+# x = Variable(torch.rand(batchsize, c_in, inpu, inpu).type(torch.FloatTensor).cuda(), requires_grad=True)
+# def stn(s, x):
+#     g = F.affine_grid(s, x.size())
+#     x = F.grid_sample(x, g)
+#     return x
+# print(gradcheck(stn, (s, x)))
+
 
 # conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group).cuda()
 conv_offset2d = ConvOffset2dFunction((stri, stri), (pad, pad), channel_per_group)
@@ -33,7 +42,7 @@ conv_offset2d = ConvOffset2dFunction((stri, stri), (pad, pad), channel_per_group
 #                    requires_grad=False)
 # weight = Variable(torch.ones(c_out, c_in, kernel, kernel).type(torch.FloatTensor).cuda(),
 #                   requires_grad=False)
-
+#
 inputs = Variable(torch.rand(batchsize, c_in, inpu, inpu).type(torch.FloatTensor).cuda(), requires_grad=True)
 offsets = Variable(torch.rand(batchsize, c_off, out, out).type(torch.FloatTensor).cuda(),
                    requires_grad=True)

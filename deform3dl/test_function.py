@@ -3,21 +3,23 @@ import torch
 
 from deform3dl.deform_conv3dl_functions import ConvOffset3dFunction
 
-batchsize = 1
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+
+batchsize = 2
 c_in = 1
 c_out = 1
-channel_per_group = 1
-kernel_l = kernel_h = kernel_w = 1
-out_l = out_h = out_w = 5
-in_l = in_h = in_w = 3
-pad = 1
+inpu = 3
+kernel = 1
 stri = 1
+pad = 0
+out = int((inpu + 2 * pad - kernel) / stri + 1)
+channel_per_group = 1
 g_off = c_in // channel_per_group
-g_c = g_off * kernel_l * kernel_h * kernel_w * 3
-inpu = torch.FloatTensor([[[[[1.0, 1, 1], [2.0, 2, 2], [1.0, 1, 1]]] * in_l] * c_in] * batchsize).cuda()
+
+inpu = torch.DoubleTensor([[[[[1.0, 1, 1], [2.0, 2, 2], [1.0, 1, 1]]] * in_l] * c_in] * batchsize).cuda()
 # inpu = torch.randn(1,1,3,7,7).cuda()
-offset = torch.FloatTensor([[[[[0.] * out_w] * out_h] * out_l] * g_off] * batchsize).cuda()
-weight = torch.FloatTensor([[[[[1.0] * kernel_w] * kernel_h] * kernel_l] * c_in] * c_out).cuda()
+offset = torch.DoubleTensor([[[[[0.] * out_w] * out_h] * out_l] * g_off] * batchsize).cuda()
+weight = torch.DoubleTensor([[[[[1.0] * kernel_w] * kernel_h] * kernel_l] * c_in] * c_out).cuda()
 tmp = offset.cpu().numpy()
 
 padding = [pad, pad, pad]
@@ -26,17 +28,17 @@ conv_offset = ConvOffset3dFunction(stride, padding, channel_per_group)
 output = conv_offset.forward(inpu, offset, weight)
 tmp = output.cpu().numpy()
 
-grad_output = torch.FloatTensor([[[[[1.0] * out_w] * out_h] * out_l] * c_out] * batchsize).cuda()
+grad_output = torch.DoubleTensor([[[[[1.0] * out_w] * out_h] * out_l] * c_out] * batchsize).cuda()
 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                      output.size(2) * output.size(3) * output.size(4)).cuda()
+                      output.size(2) * output.size(3) * output.size(4)).type(torch.DoubleTensor).cuda()
 
 # test for graph and grad
 # inputs = Variable(torch.randn(batchsize,c_in,in_l,in_h,in_w)
-#                   .type(torch.FloatTensor).cuda(),requires_grad=True)
+#                   .type(torch.DoubleTensor).cuda(),requires_grad=True)
 # offsets = Variable(torch.randn(batchsize,g_c,out_l,out_h,out_w)
-#                    .type(torch.FloatTensor).cuda(),requires_grad=True)
+#                    .type(torch.DoubleTensor).cuda(),requires_grad=True)
 # weights = Variable(torch.randn(c_out,c_in,kernel_l,kernel_h,kernel_w)
-#                    .type(torch.FloatTensor).cuda(), requires_grad=True)
+#                    .type(torch.DoubleTensor).cuda(), requires_grad=True)
 # o1 = conv_offset(inputs, offsets, weights)
 # o2 = Variable(grad_output,requires_grad=False)
 # loss = (o1 - o2).sum()
@@ -46,8 +48,8 @@ columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.
 # grad_w = weights.grad.data.cpu().numpy()
 # ---------------------------------------------
 
-grad_input = inpu.new(*inpu.size()).zero_()
-grad_offset = offset.new(*offset.size()).zero_()
+grad_input = inpu.new(*inpu.size()).type(torch.DoubleTensor).zero_()
+grad_offset = offset.new(*offset.size()).type(torch.DoubleTensor).zero_()
 deform_conv.deform_conv_backward_input_offset_cuda(
     inpu, weight, offset, grad_output, columns, grad_input, grad_offset,
     pad, pad, pad,
@@ -55,7 +57,7 @@ deform_conv.deform_conv_backward_input_offset_cuda(
 grad_input_ = grad_input.cpu().numpy()
 grad_offset_ = grad_offset.cpu().numpy()
 
-grad_weight = weight.new(*weight.size()).zero_()
+grad_weight = weight.new(*weight.size()).type(torch.DoubleTensor).zero_()
 deform_conv.deform_conv_backward_weight_cuda(
     inpu, offset, grad_output, columns, grad_weight,
     pad, pad, pad,

@@ -24,7 +24,7 @@ class ConvOffset2d(Module):
         self.padding = _pair(padding)
         self.channel_per_group = channel_per_group
 
-        self.weight = nn.Parameter(torch.FloatTensor(out_channels, in_channels, *self.kernel_size)).cuda()
+        self.weight = nn.Parameter(torch.cuda.FloatTensor(out_channels, in_channels, *self.kernel_size))
 
         nn.init.kaiming_normal(self.weight.data, mode='fan_out')
 

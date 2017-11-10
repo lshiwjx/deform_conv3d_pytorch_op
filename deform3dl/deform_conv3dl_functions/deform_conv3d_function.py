@@ -13,63 +13,45 @@ class ConvOffset3dFunction(Function):
         self.channel_per_group = channel_per_group
         self.savedtensors = ()
 
-    def forward(self, input, offset, weight):
-        self.save_for_backward(input, offset, weight)
+    def forward(self, inputs, offset, weight):
+        self.save_for_backward(inputs, offset, weight)
+        output_size = [int((inputs.size()[i + 2] + 2 * self.padding[i] - weight.size()[i + 2]) / self.stride[i] + 1)
+                       for i in range(3)]
+        output = inputs.new(inputs.size(0), weight.size(0), output_size[0], output_size[1], output_size[2], ).zero_()
 
-        output = torch.zeros(input.size(0), weight.size(0),
-                             self._to_output(input.size(2), weight.size(2), self.padding[0], self.stride[0]),
-                             self._to_output(input.size(3), weight.size(3), self.padding[1], self.stride[1]),
-                             self._to_output(input.size(4), weight.size(4), self.padding[2], self.stride[2])).cuda()
-        # output = input.new(*self._output_size(input, weight))
-        columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                              output.size(2) * output.size(3) * output.size(4)).cuda()
-        # self.bufs_ = [input.new(), input.new()]  # columns, ones
+        self.columns = inputs.new(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
+                                  output_size[0] * output_size[1] * output_size[2]).zero_()
 
-        if not input.is_cuda:
-            raise NotImplementedError
-        else:
-            if not isinstance(input, torch.cuda.FloatTensor):
-                raise NotImplementedError
-            deform_conv3dl_op.deform_conv_forward_cuda(
-                input, weight, offset, columns, output,
-                self.padding[0], self.padding[1], self.padding[2],
-                self.stride[0], self.stride[1], self.stride[2],
-                self.channel_per_group)
+        deform_conv3dl_op.deform_conv_forward_cuda(
+            inputs, weight, offset, self.columns, output,
+            self.padding[0], self.padding[1], self.padding[2],
+            self.stride[0], self.stride[1], self.stride[2],
+            self.channel_per_group)
+
         return output
 
     def backward(self, grad_output):
-        input, offset, weight = self.saved_tensors
+        inputs, offset, weight = self.saved_tensors
 
         grad_input = grad_offset = grad_weight = None
 
-        if not grad_output.is_cuda:
-            raise NotImplementedError
-        else:
-            if not isinstance(grad_output, torch.cuda.FloatTensor):
-                raise NotImplementedError
-            columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
-                                  grad_output.size(2) * grad_output.size(3) * grad_output.size(4)) \
-                .type(torch.FloatTensor).cuda()
-            if self.needs_input_grad[0] or self.needs_input_grad[1]:
-                grad_input = torch.zeros(*input.size()).type(torch.FloatTensor).cuda()
-                grad_offset = torch.zeros(*offset.size()).cuda()
+        if self.needs_input_grad[0] or self.needs_input_grad[1]:
+            grad_input = inputs.new(inputs.size()).zero_()
+            grad_offset = offset.new(offset.size()).zero_()
 
-                deform_conv3dl_op.deform_conv_backward_input_offset_cuda(
-                    input, weight, offset, grad_output, columns, grad_input, grad_offset,
-                    self.padding[0], self.padding[1], self.padding[2],
-                    self.stride[0], self.stride[1], self.stride[2],
-                    self.channel_per_group)
+            deform_conv3dl_op.deform_conv_backward_input_offset_cuda(
+                inputs, weight, offset, grad_output, self.columns, grad_input, grad_offset,
+                self.padding[0], self.padding[1], self.padding[2],
+                self.stride[0], self.stride[1], self.stride[2],
+                self.channel_per_group)
 
-            if self.needs_input_grad[2]:
-                grad_weight = torch.zeros(*weight.size()).cuda()
+        if self.needs_input_grad[2]:
+            grad_weight = weight.new(weight.size()).zero_()
 
-                deform_conv3dl_op.deform_conv_backward_weight_cuda(
-                    input, offset, grad_output, columns, grad_weight,
-                    self.padding[0], self.padding[1], self.padding[2],
-                    self.stride[0], self.stride[1], self.stride[2],
-                    self.channel_per_group)
+            deform_conv3dl_op.deform_conv_backward_weight_cuda(
+                inputs, offset, grad_output, self.columns, grad_weight,
+                self.padding[0], self.padding[1], self.padding[2],
+                self.stride[0], self.stride[1], self.stride[2],
+                self.channel_per_group)
 
         return grad_input, grad_offset, grad_weight
-
-    def _to_output(self, inpu, kernel, pad, stride):
-        return int((inpu + 2 * pad - kernel) / stride + 1)

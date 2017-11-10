@@ -162,7 +162,7 @@ int deform_conv_backward_input_offset_cuda(
     long n = columns->size[1];
     long k = weight->size[0];
     THCudaBlas_Sgemm(state, 'n', 't', n, m, k,
-                     1.0f, THCudaTensor_data(state, grad_output), n,
+                     1.0f, THCudaTensor_data(state, grad_output_n), n,
                      THCudaTensor_data(state, weight), m,
                      0.0f, THCudaTensor_data(state, columns), n);
     deformable_col2im_offset(THCState_getCurrentStream(state), THCudaTensor_data(state, columns),
