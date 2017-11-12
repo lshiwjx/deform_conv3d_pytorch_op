@@ -5,7 +5,7 @@ import os
 from deform3dl_double.gradcheck import gradcheck
 from deform3dl_double.deform_conv3dl_functions import ConvOffset3dFunction
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 batchsize = 2
 c_in = 2

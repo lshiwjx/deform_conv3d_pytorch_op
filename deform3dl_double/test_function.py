@@ -1,11 +1,11 @@
-import deform3dl.deform_conv3dl_op as deform_conv
+import deform3dl_double.deform_conv3dl_op as deform_conv
 import torch
 import os
-from deform3dl.deform_conv3dl_functions import ConvOffset3dFunction
+from deform3dl_double.deform_conv3dl_functions import ConvOffset3dFunction
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-batchsize = 2
+batchsize = 1
 c_in = 1
 c_out = 1
 inpu = 3
@@ -19,7 +19,7 @@ g_off = c_in // channel_per_group
 # inpu = torch.cuda.DoubleTensor([[[[[1.0, 1, 1], [1.0, 2, 3], [1.0, 3, 1]]] * inpu] * c_in] * batchsize)
 inpu = torch.cuda.DoubleTensor(
     [[[[[1.0] * inpu] * inpu, [[2.0] * inpu] * inpu, [[1.0] * inpu] * inpu]] * c_in] * batchsize)
-offset = torch.cuda.DoubleTensor([[[[[1.] * out] * out] * out] * g_off] * batchsize)
+offset = torch.cuda.DoubleTensor([[[[[2.] * out] * out] * out] * g_off] * batchsize)
 weight = torch.cuda.DoubleTensor([[[[[1.0] * kernel] * kernel] * kernel] * c_in] * c_out)
 tmp = offset.cpu().numpy()
 
