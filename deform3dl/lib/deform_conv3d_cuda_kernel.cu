@@ -305,6 +305,10 @@ __global__ void deformable_col2im_offset_gpu_kernel(
                             val += *data_col_base_ptr *
                                    (c1 - c0);
                         }
+                        else if (l_in_after <= -1)
+                            val += (*data_col_base_ptr>0?-*data_col_base_ptr:*data_col_base_ptr);
+                        else if (l_in_after >= input_l)
+                            val += (*data_col_base_ptr>0?*data_col_base_ptr:-*data_col_base_ptr);
                     }
         *grad_offset_base_ptr = val;
     }

@@ -458,6 +458,18 @@ __global__ void deformable_col2im_offset_gpu_kernel(
                         printf("error in switch");
                 }
             }
+            else if (l_in_after <= -1 && int_3 == 0)
+                 val += (*data_col_base_ptr>0?-*data_col_base_ptr:*data_col_base_ptr);
+            else if (l_in_after >= input_l && int_3 == 0)
+                 val += (*data_col_base_ptr>0?*data_col_base_ptr:-*data_col_base_ptr);
+            else if (h_in_after <= -1 && int_3 == 1)
+                 val += (*data_col_base_ptr>0?-*data_col_base_ptr:*data_col_base_ptr);
+            else if (h_in_after >= input_l && int_3 == 1)
+                 val += (*data_col_base_ptr>0?*data_col_base_ptr:-*data_col_base_ptr);
+            else if (w_in_after <= -1 && int_3 == 2)
+                 val += (*data_col_base_ptr>0?-*data_col_base_ptr:*data_col_base_ptr);
+            else if (w_in_after >= input_l && int_3 == 2)
+                 val += (*data_col_base_ptr>0?*data_col_base_ptr:-*data_col_base_ptr);
         }
         *grad_offset_base_ptr = val;
     }

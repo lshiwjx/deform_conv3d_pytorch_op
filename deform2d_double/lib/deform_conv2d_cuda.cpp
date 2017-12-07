@@ -151,6 +151,10 @@ int deform_conv_backward_input_offset_cuda(
         THCudaDoubleTensor_select(state, grad_input_n, grad_input, 0, i);
         THCudaDoubleTensor_select(state, grad_offset_n, grad_offset, 0, i);
         THCudaDoubleTensor_select(state, grad_output_n, grad_output, 0, i);
+
+        //for(int j=0;j<groups;j++){
+            //在分成各个组，每组单独卷积，deform的组应该小于这个等级。
+        //}
         
         //Wt * O = C
         long m = columns->size[0];

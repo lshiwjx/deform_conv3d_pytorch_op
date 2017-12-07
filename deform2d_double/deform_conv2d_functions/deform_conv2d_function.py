@@ -1,57 +1,70 @@
 import torch
-from torch.autograd import Function
+from torch.autograd import Function, Variable
 
 from deform2d_double import deform_conv2d_op
 
 
 class ConvOffset2dFunction(Function):
-    def __init__(self, stride, padding, channel_per_group):
-        super(ConvOffset2dFunction, self).__init__()
-        self.stride = stride
-        self.padding = padding
-        self.channel_per_group = channel_per_group
-        self.savedtensors = ()
+    # @staticmethod
+    # def init(ctx, stride, padding, channel_per_group):
+    #     ctx.stride = stride
+    #     ctx.padding = padding
+    #     ctx.channel_per_group = channel_per_group
+    #     ctx.savedtensors = ()
 
-    def forward(self, inputs, offset, weight):
-        self.save_for_backward(inputs, offset, weight)
-        output_size = [int((inputs.size()[i + 2] + 2 * self.padding[i] - weight.size()[i + 2]) / self.stride[i] + 1)
+    @staticmethod
+    def forward(ctx, inputs, offset, weight, bias=None, stride=(1, 1), padding=(0, 0), channel_per_group=1):
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.channel_per_group = channel_per_group
+        ctx.save_for_backward(inputs, offset, weight, bias)
+
+        output_size = [int((inputs.size()[i + 2] + 2 * ctx.padding[i] - weight.size()[i + 2]) / ctx.stride[i] + 1)
                        for i in range(2)]
 
         output = inputs.new(inputs.size(0), weight.size(0), output_size[0], output_size[1]).zero_()
 
-        self.columns = inputs.new(weight.size(1) * weight.size(2) * weight.size(3),
-                                  output_size[0] * output_size[1]).zero_()
+        ctx.columns = inputs.new(weight.size(1) * weight.size(2) * weight.size(3),
+                                 output_size[0] * output_size[1]).zero_()
+        # ctx.ones = inputs.new(output_size[0], output_size[1]).fill_(1)
 
         deform_conv2d_op.deform_conv_forward_cuda(
-            inputs, weight, offset, self.columns, output,
-            self.padding[0], self.padding[1],
-            self.stride[0], self.stride[1],
-            self.channel_per_group)
+            inputs, weight, offset, ctx.columns, output,
+            ctx.padding[0], ctx.padding[1],
+            ctx.stride[0], ctx.stride[1],
+            ctx.channel_per_group)
+
+        if bias is not None:
+            output += bias.view((1, -1, 1, 1)).expand_as(output)
 
         return output
 
-    def backward(self, grad_output):
-        inputs, offset, weight = self.saved_tensors
+    @staticmethod
+    def backward(ctx, grad_output):
+        inputs, offset, weight, bias = ctx.saved_variables
 
-        grad_input = grad_offset = grad_weight = None
-
-        if self.needs_input_grad[0] or self.needs_input_grad[1]:
-            grad_input = inputs.new(inputs.size()).zero_()
-            grad_offset = offset.new(offset.size()).zero_()
+        grad_input = grad_offset = grad_weight = grad_bias = None
+        # 前传得到的是tensor 反传是variable
+        if ctx.needs_input_grad[0] or ctx.needs_input_grad[1]:
+            grad_input = inputs.data.new(inputs.size()).zero_()
+            grad_offset = offset.data.new(offset.size()).zero_()
 
             deform_conv2d_op.deform_conv_backward_input_offset_cuda(
-                inputs, weight, offset, grad_output, self.columns, grad_input, grad_offset,
-                self.padding[0], self.padding[1],
-                self.stride[0], self.stride[1],
-                self.channel_per_group)
+                inputs.data, weight.data, offset.data, grad_output.data, ctx.columns, grad_input, grad_offset,
+                ctx.padding[0], ctx.padding[1],
+                ctx.stride[0], ctx.stride[1],
+                ctx.channel_per_group)
 
-        if self.needs_input_grad[2]:
-            grad_weight = weight.new(weight.size()).zero_()
+        if ctx.needs_input_grad[2]:
+            grad_weight = weight.data.new(weight.size()).zero_()
 
             deform_conv2d_op.deform_conv_backward_weight_cuda(
-                inputs, offset, grad_output, self.columns, grad_weight,
-                self.padding[0], self.padding[1],
-                self.stride[0], self.stride[1],
-                self.channel_per_group)
+                inputs.data, offset.data, grad_output.data, ctx.columns, grad_weight,
+                ctx.padding[0], ctx.padding[1],
+                ctx.stride[0], ctx.stride[1],
+                ctx.channel_per_group)
 
-        return grad_input, grad_offset, grad_weight
+        if bias is not None and ctx.needs_input_grad[3]:
+            grad_bias = grad_output.sum(0).sum(1).sum(1)
+
+        return Variable(grad_input), Variable(grad_offset), Variable(grad_weight), grad_bias, None, None, None

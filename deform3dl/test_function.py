@@ -17,7 +17,7 @@ channel_per_group = 1
 g_off = c_in // channel_per_group
 
 inpu = torch.FloatTensor(
-    [[[[[1.0] * inpu] * inpu, [[2.0] * inpu] * inpu, [[1.0] * inpu] * inpu]] * c_in] * batchsize).cuda()
+    [[[[[1.0] * inpu] * inpu, [[1.0] * inpu] * inpu, [[1.0] * inpu] * inpu]] * c_in] * batchsize).cuda()
 # inpu = torch.randn(1,1,3,7,7).cuda()
 offset = torch.FloatTensor([[[[[1.] * out] * out] * out] * g_off] * batchsize).cuda()
 weight = torch.FloatTensor([[[[[1.0] * kernel] * kernel] * kernel] * c_in] * c_out).cuda()
@@ -66,6 +66,6 @@ deform_conv.deform_conv_backward_weight_cuda(
 gradeight_ = gradeight.cpu().numpy()
 
 print('forward\n', tmp)
-print('grad input\n', grad_input_)
-print('grad weight\n', gradeight_)
+# print('grad input\n', grad_input_)
+# print('grad weight\n', gradeight_)
 print('grad offset\n', grad_offset_)
