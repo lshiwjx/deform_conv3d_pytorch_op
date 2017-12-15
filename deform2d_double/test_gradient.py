@@ -4,14 +4,15 @@ from torch.autograd import Variable
 import os
 from deform2d_double.gradcheck import gradcheck
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 batchsize = 2
 c_in = 2
 c_out = 4
 inpu = 7
 kernel = 1
 stri = 2
-pad = 1
+pad = 2
+dilation = 2
 out = int((inpu + 2 * pad - kernel) / stri + 1)
 channel_per_group = 2
 g_off = c_in // channel_per_group
@@ -49,4 +50,5 @@ bias = Variable(torch.rand(c_out).double().cuda(),
 
 print(
     gradcheck(ConvOffset2dFunction.apply,
-              (inputs, offsets, weight, bias, (stri, stri), (pad, pad), channel_per_group, group)))
+              (
+              inputs, offsets, weight, bias, (stri, stri), (pad, pad), (dilation, dilation), channel_per_group, group)))

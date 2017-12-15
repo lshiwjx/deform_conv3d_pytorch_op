@@ -14,6 +14,7 @@ int deform_conv_forward_cuda(
         THCudaTensor *columns, THCudaTensor *output,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group);
 
 int deform_conv_backward_input_offset_cuda(
@@ -21,6 +22,7 @@ int deform_conv_backward_input_offset_cuda(
         THCudaTensor *columns, THCudaTensor *grad_input, THCudaTensor *grad_offset,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group);
 
 int deform_conv_backward_weight_cuda(
@@ -28,6 +30,7 @@ int deform_conv_backward_weight_cuda(
         THCudaTensor *columns, THCudaTensor *grad_weight,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group);
 
 

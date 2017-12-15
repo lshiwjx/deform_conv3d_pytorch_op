@@ -15,6 +15,7 @@ class ConvOffset2d(Module):
                  kernel_size,
                  stride=1,
                  padding=0,
+                 dilation=1,
                  channel_per_group=1,
                  bias=True,
                  groups=1):
@@ -24,6 +25,7 @@ class ConvOffset2d(Module):
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
         self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
         self.channel_per_group = channel_per_group
         self.group = groups
 
@@ -44,6 +46,7 @@ class ConvOffset2d(Module):
     def forward(self, input, offset):
         # ConvOffset2dFunction.init(self.stride, self.padding, self.channel_per_group)
         return ConvOffset2dFunction.apply(input, offset, self.weight, self.bias, self.stride, self.padding,
+                                          self.dilation,
                                           self.channel_per_group, self.group)
         # return ConvOffset2dFunction(self.stride, self.padding, self.channel_per_group)\
         #     .apply(input, offset, self.weight, self.bias)

@@ -13,9 +13,11 @@ class ConvOffset2dFunction(Function):
     #     ctx.savedtensors = ()
 
     @staticmethod
-    def forward(ctx, inputs, offset, weight, bias=None, stride=(1, 1), padding=(0, 0), channel_per_group=1, group=1):
+    def forward(ctx, inputs, offset, weight, bias=None, stride=(1, 1), padding=(0, 0), dilation=(1, 1),
+                channel_per_group=1, group=1):
         ctx.stride = stride
         ctx.padding = padding
+        ctx.dilation = dilation
         ctx.channel_per_group = channel_per_group
         ctx.group = group
         ctx.save_for_backward(inputs, offset, weight, bias)
@@ -33,6 +35,7 @@ class ConvOffset2dFunction(Function):
             inputs, weight, offset, ctx.columns, output,
             ctx.padding[0], ctx.padding[1],
             ctx.stride[0], ctx.stride[1],
+            ctx.dilation[0], ctx.dilation[1],
             ctx.channel_per_group, ctx.group)
 
         if bias is not None:
@@ -54,6 +57,7 @@ class ConvOffset2dFunction(Function):
                 inputs.data, weight.data, offset.data, grad_output.data, ctx.columns, grad_input, grad_offset,
                 ctx.padding[0], ctx.padding[1],
                 ctx.stride[0], ctx.stride[1],
+                ctx.dilation[0], ctx.dilation[1],
                 ctx.channel_per_group, ctx.group)
 
         if ctx.needs_input_grad[2]:
@@ -63,9 +67,11 @@ class ConvOffset2dFunction(Function):
                 inputs.data, offset.data, grad_output.data, ctx.columns, grad_weight,
                 ctx.padding[0], ctx.padding[1],
                 ctx.stride[0], ctx.stride[1],
+                ctx.dilation[0], ctx.dilation[1],
                 ctx.channel_per_group, ctx.group)
 
         if bias is not None and ctx.needs_input_grad[3]:
             grad_bias = grad_output.sum(0).sum(1).sum(1)
 
-        return Variable(grad_input), Variable(grad_offset), Variable(grad_weight), grad_bias, None, None, None, None
+        return Variable(grad_input), Variable(grad_offset), Variable(
+            grad_weight), grad_bias, None, None, None, None, None

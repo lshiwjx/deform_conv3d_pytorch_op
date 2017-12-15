@@ -8,17 +8,18 @@ import torch.nn as nn
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 batchsize = 2
-c_in = 64
-c_out = 32
+c_in = 2
+c_out = 4
 inpu = 7
 kernel = 3
 stri = 2
-pad = 1
+pad = 2
+dilation = 2
 out = int((inpu + 2 * pad - kernel) / stri + 1)
 channel_per_group = 2
 g_off = c_in // channel_per_group
 c_off = g_off * kernel * kernel * kernel * 3
-group = 32
+group = 2
 
 inputs = Variable(torch.rand(batchsize, c_in, inpu, inpu, inpu).cuda(), requires_grad=True)
 offsets = Variable(torch.rand(batchsize, c_off, out, out, out).cuda(), requires_grad=True)
@@ -26,5 +27,6 @@ weight = Variable(torch.rand(c_out, c_in // group, kernel, kernel, kernel).cuda(
 bias = Variable(torch.rand(c_out).cuda(), requires_grad=True)
 
 print(gradcheck(ConvOffset3dFunction.apply,
-                (inputs, offsets, weight, bias, (stri, stri, stri), (pad, pad, pad), channel_per_group, group)))
+                (inputs, offsets, weight, bias, (stri, stri, stri), (pad, pad, pad), (dilation, dilation, dilation),
+                 channel_per_group, group)))
 # print(gradcheck(F.conv3d, (inputs, weight)))

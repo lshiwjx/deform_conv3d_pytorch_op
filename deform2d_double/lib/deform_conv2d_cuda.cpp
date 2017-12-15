@@ -84,6 +84,7 @@ int deform_conv_forward_cuda(
         THCudaDoubleTensor *columns, THCudaDoubleTensor *output,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
+        const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group) {
 //    cout<<"safe"<<endl;
     shape_check(state, input, weight, offset, output, columns,
@@ -105,6 +106,7 @@ int deform_conv_forward_cuda(
                       weight->size[2], weight->size[3],
                       pad_h, pad_w,
                       stride_h, stride_w,
+                      dilation_h, dilation_w,
                       channel_per_deformable_group, THCudaDoubleTensor_data(state, columns));
 
         THCudaDoubleTensor *columns_g = THCudaDoubleTensor_new(state);
@@ -158,6 +160,7 @@ int deform_conv_backward_input_offset_cuda(
         THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_input, THCudaDoubleTensor *grad_offset,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
+        const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group) {
     shape_check(state, input, weight, grad_offset, grad_output, columns,
                 pad_h, pad_w, stride_h, stride_w, channel_per_deformable_group, group);
@@ -220,6 +223,7 @@ int deform_conv_backward_input_offset_cuda(
                                  weight->size[2], weight->size[3],
                                  pad_h, pad_w,
                                  stride_h, stride_w,
+                                 dilation_h, dilation_w,
                                  channel_per_deformable_group, THCudaDoubleTensor_data(state, grad_offset_n));
         deformable_col2im_input(THCState_getCurrentStream(state),
                                 THCudaDoubleTensor_data(state, columns),
@@ -228,7 +232,9 @@ int deform_conv_backward_input_offset_cuda(
                                 grad_output->size[2], grad_output->size[3],
                                 weight->size[2], weight->size[3],
                                 pad_h, pad_w,
-                                stride_h, stride_w, channel_per_deformable_group,
+                                stride_h, stride_w,
+                                dilation_h, dilation_w,
+                                channel_per_deformable_group,
                                 THCudaDoubleTensor_data(state, grad_input_n));
     }
     
@@ -248,6 +254,7 @@ int deform_conv_backward_weight_cuda(
         THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_weight,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
+        const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, const int group) {
     shape_check(state, input, grad_weight, offset, grad_output, columns,
                 pad_h, pad_w, stride_h, stride_w, channel_per_deformable_group, group);
@@ -267,6 +274,7 @@ int deform_conv_backward_weight_cuda(
                           grad_weight->size[2], grad_weight->size[3],
                           pad_h, pad_w,
                           stride_h, stride_w,
+                          dilation_h, dilation_w,
                           channel_per_deformable_group,
                           THCudaDoubleTensor_data(state, columns));
 

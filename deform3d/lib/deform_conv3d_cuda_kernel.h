@@ -17,6 +17,7 @@ void deformable_im2col(cudaStream_t stream,
                        const int kernel_l, const int kernel_h, const int kernel_w,
                        const int pad_l, const int pad_h, const int pad_w,
                        const int stride_l, const int stride_h, const int stride_w,
+                       const int dilation_l, const int dilation_h, const int dilation_w,
                        const int channel_per_deformable_group, DType *data_col);
 
 
@@ -29,6 +30,7 @@ void deformable_col2im_input(cudaStream_t stream,
                              const int kernel_l, const int kernel_h, const int kernel_w,
                              const int pad_l, const int pad_h, const int pad_w,
                              const int stride_l, const int stride_h, const int stride_w,
+                             const int dilation_l, const int dilation_h, const int dilation_w,
                              const int channel_per_deformable_group, DType *grad_im);
 
 template<typename DType>
@@ -40,6 +42,7 @@ void deformable_col2im_offset(cudaStream_t stream, const DType *data_col,
                               const int kernel_l, const int kernel_h, const int kernel_w,
                               const int pad_l, const int pad_h, const int pad_w,
                               const int stride_l, const int stride_h, const int stride_w,
+                              const int dilation_l, const int dilation_h, const int dilation_w,
                               const int channel_per_deformable_group,
                               DType *grad_offset);
 

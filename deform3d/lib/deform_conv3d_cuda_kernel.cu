@@ -66,6 +66,7 @@ __global__ void deformable_im2col_gpu_kernel(
         const int kernel_l, const int kernel_h, const int kernel_w,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group,
         const int output_l, const int output_h, const int output_w, DType *data_col) {
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < num_kernels;
@@ -113,9 +114,9 @@ __global__ void deformable_im2col_gpu_kernel(
                            w_out;
 //        printf("%d %d %d %d %f %f %f\n",threadIdx.x,l_in,h_in,w_in,data_offset_base_ptr[offset + output_v * 0],
 //               data_offset_base_ptr[offset + output_v * 1],data_offset_base_ptr[offset + output_v * 2]);
-        const DType l_in_after = l_in + l_kernel + data_offset_base_ptr[offset + output_v * 0];
-        const DType h_in_after = h_in + h_kernel + data_offset_base_ptr[offset + output_v * 1];
-        const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[offset + output_v * 2];
+        const DType l_in_after = l_in + l_kernel*dilation_l + data_offset_base_ptr[offset + output_v * 0];
+        const DType h_in_after = h_in + h_kernel*dilation_h + data_offset_base_ptr[offset + output_v * 1];
+        const DType w_in_after = w_in + w_kernel*dilation_w + data_offset_base_ptr[offset + output_v * 2];
 //        printf("%d %f %f %f\n",threadIdx.x,l_in_after,h_in_after,w_in_after);
 
         DType val = 0;
@@ -143,6 +144,7 @@ void deformable_im2col(cudaStream_t stream,
                        const int kernel_l, const int kernel_h, const int kernel_w,
                        const int pad_l, const int pad_h, const int pad_w,
                        const int stride_l, const int stride_h, const int stride_w,
+                       const int dilation_l, const int dilation_h, const int dilation_w,
                        const int channel_per_deformable_group, DType *data_col) {
     int num_kernels = output_l * output_h * output_w * input_c * kernel_l * kernel_h * kernel_w;
     deformable_im2col_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
@@ -151,6 +153,7 @@ void deformable_im2col(cudaStream_t stream,
                     kernel_l, kernel_h, kernel_w,
                     pad_l, pad_h, pad_w,
                     stride_l, stride_h, stride_w,
+                    dilation_l, dilation_h, dilation_w,
                     channel_per_deformable_group,
                     output_l, output_h, output_w,
                     data_col);
@@ -165,6 +168,7 @@ void deformable_im2col<float>(cudaStream_t stream,
                               const int kernel_l, const int kernel_h, const int kernel_w,
                               const int pad_l, const int pad_h, const int pad_w,
                               const int stride_l, const int stride_h, const int stride_w,
+                              const int dilation_l, const int dilation_h, const int dilation_w,
                               const int channel_per_deformable_group, float *data_col);
 
 //---------------------------------------------backward to input---------------------------------------------------
@@ -176,6 +180,7 @@ __global__ void deformable_col2im_input_gpu_kernel(
         const int kernel_l, const int kernel_h, const int kernel_w,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group, DType *grad_im) {
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < num_kernels;
          index += blockDim.x * gridDim.x) {
@@ -221,9 +226,9 @@ __global__ void deformable_col2im_input_gpu_kernel(
 //        printf("%d %d %d %d %d %x\n", threadIdx.x,b_in,c_in,input_c, input_v, grad_in_base_ptr);
         const int data_width_1d = input_w;
         const int data_width_2d = input_h * input_w;
-        const DType l_in_after = l_in + l_kernel + data_offset_base_ptr[0 * output_v + offset];
-        const DType h_in_after = h_in + h_kernel + data_offset_base_ptr[1 * output_v + offset];
-        const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[2 * output_v + offset];
+        const DType l_in_after = l_in + l_kernel*dilation_l + data_offset_base_ptr[0 * output_v + offset];
+        const DType h_in_after = h_in + h_kernel*dilation_h + data_offset_base_ptr[1 * output_v + offset];
+        const DType w_in_after = w_in + w_kernel*dilation_w + data_offset_base_ptr[2 * output_v + offset];
 //        printf("%d %f %f %f\n", threadIdx.x,l_in_after,h_in_after,w_in_after);
         if (l_in_after > -1 && h_in_after > -1 && w_in_after > -1 && l_in_after < input_l &&
             h_in_after < input_h && w_in_after < input_w) {
@@ -302,6 +307,7 @@ void deformable_col2im_input(cudaStream_t stream,
                              const int kernel_l, const int kernel_h, const int kernel_w,
                              const int pad_l, const int pad_h, const int pad_w,
                              const int stride_l, const int stride_h, const int stride_w,
+                             const int dilation_l, const int dilation_h, const int dilation_w,
                              const int channel_per_deformable_group, DType *grad_im) {
     const int num_kernels = output_l * output_h * output_w * input_c * kernel_l * kernel_h * kernel_w;
     deformable_col2im_input_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
@@ -311,6 +317,7 @@ void deformable_col2im_input(cudaStream_t stream,
                     kernel_l, kernel_h, kernel_w,
                     pad_l, pad_h, pad_w,
                     stride_l, stride_h, stride_w,
+                    dilation_l, dilation_h, dilation_w,
                     channel_per_deformable_group, grad_im
     );
 }
@@ -324,6 +331,7 @@ void deformable_col2im_input<float>(cudaStream_t stream,
                                     const int kernel_l, const int kernel_h, const int kernel_w,
                                     const int pad_l, const int pad_h, const int pad_w,
                                     const int stride_l, const int stride_h, const int stride_w,
+                                    const int dilation_l, const int dilation_h, const int dilation_w,
                                     const int channel_per_deformable_group, float *grad_im);
 
 //--------------------------------------------------backward to offset---------------------------------------------
@@ -338,6 +346,7 @@ __global__ void deformable_col2im_offset_gpu_kernel(
         const int kernel_l, const int kernel_h, const int kernel_w,
         const int pad_l, const int pad_h, const int pad_w,
         const int stride_l, const int stride_h, const int stride_w,
+        const int dilation_l, const int dilation_h, const int dilation_w,
         const int channel_per_deformable_group,
         DType *grad_off) {
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < num_kernels;
@@ -390,9 +399,9 @@ __global__ void deformable_col2im_offset_gpu_kernel(
 
             const int data_width_1d = input_w;
             const int data_width_2d = input_h * input_w;
-            const DType l_in_after = l_in + l_kernel + data_offset_base_ptr[0 * output_v + offset];
-            const DType h_in_after = h_in + h_kernel + data_offset_base_ptr[1 * output_v + offset];
-            const DType w_in_after = w_in + w_kernel + data_offset_base_ptr[2 * output_v + offset];
+            const DType l_in_after = l_in + l_kernel*dilation_l + data_offset_base_ptr[0 * output_v + offset];
+            const DType h_in_after = h_in + h_kernel*dilation_h + data_offset_base_ptr[1 * output_v + offset];
+            const DType w_in_after = w_in + w_kernel*dilation_w + data_offset_base_ptr[2 * output_v + offset];
             if (l_in_after > -1 && h_in_after > -1 && w_in_after > -1 && l_in_after < input_l &&
                 h_in_after < input_h && w_in_after < input_w) {
                 //eight point around
@@ -485,6 +494,7 @@ void deformable_col2im_offset(cudaStream_t stream,
                               const int kernel_l, const int kernel_h, const int kernel_w,
                               const int pad_l, const int pad_h, const int pad_w,
                               const int stride_l, const int stride_h, const int stride_w,
+                              const int dilation_l, const int dilation_h, const int dilation_w,
                               const int channel_per_deformable_group,
                               DType *grad_offset) {
     const int num_kernels = (input_c / channel_per_deformable_group)
@@ -496,6 +506,7 @@ void deformable_col2im_offset(cudaStream_t stream,
                     kernel_l, kernel_h, kernel_w,
                     pad_l, pad_h, pad_w,
                     stride_l, stride_h, stride_w,
+                    dilation_l, dilation_h, dilation_w,
                     channel_per_deformable_group, grad_offset
     );
 }
@@ -510,5 +521,6 @@ void deformable_col2im_offset<float>(cudaStream_t stream,
                                      const int kernel_l, const int kernel_h, const int kernel_w,
                                      const int pad_l, const int pad_h, const int pad_w,
                                      const int stride_l, const int stride_h, const int stride_w,
+                                     const int dilation_l, const int dilation_h, const int dilation_w,
                                      const int channel_per_deformable_group,
                                      float *grad_offset);
