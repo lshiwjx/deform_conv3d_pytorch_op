@@ -25,6 +25,7 @@ class ConvOffset2d(Module):
         self.stride = _pair(stride)
         self.padding = _pair(padding)
         self.channel_per_group = channel_per_group
+        self.group = groups
 
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -33,6 +34,7 @@ class ConvOffset2d(Module):
 
         self.weight = nn.Parameter(torch.cuda.DoubleTensor(out_channels, in_channels // groups, *self.kernel_size))
         nn.init.kaiming_normal(self.weight.data, mode='fan_out')
+        nn.init.constant(self.weight.data, 1)
         if bias:
             self.bias = nn.Parameter(torch.cuda.DoubleTensor(out_channels))
             nn.init.uniform(self.bias.data, -0.1, 0.1)
@@ -42,6 +44,6 @@ class ConvOffset2d(Module):
     def forward(self, input, offset):
         # ConvOffset2dFunction.init(self.stride, self.padding, self.channel_per_group)
         return ConvOffset2dFunction.apply(input, offset, self.weight, self.bias, self.stride, self.padding,
-                                          self.channel_per_group)
+                                          self.channel_per_group, self.group)
         # return ConvOffset2dFunction(self.stride, self.padding, self.channel_per_group)\
         #     .apply(input, offset, self.weight, self.bias)

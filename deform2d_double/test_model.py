@@ -6,17 +6,18 @@ from deform2d_double.deform_conv2d_modules import ConvOffset2d
 import time
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '5'
-batchsize = 2
+batchsize = 1
 c_in = 2
-c_out = 3
-inpu = 5
-kernel = 3
+c_out = 2
+inpu = 3
+kernel = 1
 stri = 1
 pad = 0
 out = int((inpu + 2 * pad - kernel) / stri + 1)
 channel_per_group = 1
+group = 2
 
-conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group, bias=False)
+conv_offset2d = ConvOffset2d(c_in, c_out, kernel, stri, pad, channel_per_group, bias=True, groups=group)
 conv = nn.Conv2d(
     c_in,
     c_in // channel_per_group * 2 * kernel * kernel,
@@ -25,9 +26,9 @@ conv = nn.Conv2d(
     padding=pad,
     bias=False).type(torch.DoubleTensor).cuda()
 inputs = Variable(torch.ones((batchsize, c_in, inpu, inpu)), requires_grad=True).type(torch.DoubleTensor).cuda()
-# offset = Variable(torch.zeros((batchsize, c_in // channel_per_group * 2 * kernel * kernel, out, out)),
-#                   requires_grad=True).type(torch.DoubleTensor).cuda()
-offset = conv(inputs)
+offset = Variable(torch.zeros((batchsize, c_in // channel_per_group * 2 * kernel * kernel, out, out)),
+                  requires_grad=True).type(torch.DoubleTensor).cuda()
+# offset = conv(inputs)
 start = time.time()
 output = conv_offset2d(inputs, offset)
 forward = time.time() - start

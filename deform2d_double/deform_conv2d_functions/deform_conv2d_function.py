@@ -13,10 +13,11 @@ class ConvOffset2dFunction(Function):
     #     ctx.savedtensors = ()
 
     @staticmethod
-    def forward(ctx, inputs, offset, weight, bias=None, stride=(1, 1), padding=(0, 0), channel_per_group=1):
+    def forward(ctx, inputs, offset, weight, bias=None, stride=(1, 1), padding=(0, 0), channel_per_group=1, group=1):
         ctx.stride = stride
         ctx.padding = padding
         ctx.channel_per_group = channel_per_group
+        ctx.group = group
         ctx.save_for_backward(inputs, offset, weight, bias)
 
         output_size = [int((inputs.size()[i + 2] + 2 * ctx.padding[i] - weight.size()[i + 2]) / ctx.stride[i] + 1)
@@ -24,7 +25,7 @@ class ConvOffset2dFunction(Function):
 
         output = inputs.new(inputs.size(0), weight.size(0), output_size[0], output_size[1]).zero_()
 
-        ctx.columns = inputs.new(weight.size(1) * weight.size(2) * weight.size(3),
+        ctx.columns = inputs.new(inputs.size(1) * weight.size(2) * weight.size(3),
                                  output_size[0] * output_size[1]).zero_()
         # ctx.ones = inputs.new(output_size[0], output_size[1]).fill_(1)
 
@@ -32,7 +33,7 @@ class ConvOffset2dFunction(Function):
             inputs, weight, offset, ctx.columns, output,
             ctx.padding[0], ctx.padding[1],
             ctx.stride[0], ctx.stride[1],
-            ctx.channel_per_group)
+            ctx.channel_per_group, ctx.group)
 
         if bias is not None:
             output += bias.view((1, -1, 1, 1)).expand_as(output)
@@ -53,7 +54,7 @@ class ConvOffset2dFunction(Function):
                 inputs.data, weight.data, offset.data, grad_output.data, ctx.columns, grad_input, grad_offset,
                 ctx.padding[0], ctx.padding[1],
                 ctx.stride[0], ctx.stride[1],
-                ctx.channel_per_group)
+                ctx.channel_per_group, ctx.group)
 
         if ctx.needs_input_grad[2]:
             grad_weight = weight.data.new(weight.size()).zero_()
@@ -62,9 +63,9 @@ class ConvOffset2dFunction(Function):
                 inputs.data, offset.data, grad_output.data, ctx.columns, grad_weight,
                 ctx.padding[0], ctx.padding[1],
                 ctx.stride[0], ctx.stride[1],
-                ctx.channel_per_group)
+                ctx.channel_per_group, ctx.group)
 
         if bias is not None and ctx.needs_input_grad[3]:
             grad_bias = grad_output.sum(0).sum(1).sum(1)
 
-        return Variable(grad_input), Variable(grad_offset), Variable(grad_weight), grad_bias, None, None, None
+        return Variable(grad_input), Variable(grad_offset), Variable(grad_weight), grad_bias, None, None, None, None

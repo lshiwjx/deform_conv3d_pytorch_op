@@ -7,7 +7,7 @@ from deform2d_double.gradcheck import gradcheck
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 batchsize = 2
 c_in = 2
-c_out = 3
+c_out = 4
 inpu = 7
 kernel = 1
 stri = 2
@@ -16,7 +16,7 @@ out = int((inpu + 2 * pad - kernel) / stri + 1)
 channel_per_group = 2
 g_off = c_in // channel_per_group
 c_off = g_off * kernel * kernel * 2
-
+group = 2
 # s = Variable(torch.rand(batchsize,2,3).type(torch.DoubleTensor).cuda(), requires_grad=True)
 # x = Variable(torch.rand(batchsize, c_in, inpu, inpu).type(torch.DoubleTensor).cuda(), requires_grad=True)
 # def stn(s, x):
@@ -42,10 +42,11 @@ c_off = g_off * kernel * kernel * 2
 inputs = Variable(torch.rand(batchsize, c_in, inpu, inpu).double().cuda(), requires_grad=True)
 offsets = Variable(torch.rand(batchsize, c_off, out, out).double().cuda(),
                    requires_grad=True)
-weight = Variable(torch.rand(c_out, c_in, kernel, kernel).double().cuda(),
+weight = Variable(torch.rand(c_out, c_in // group, kernel, kernel).double().cuda(),
                   requires_grad=True)
 bias = Variable(torch.rand(c_out).double().cuda(),
-                requires_grad=False)
+                requires_grad=True)
 
 print(
-    gradcheck(ConvOffset2dFunction.apply, (inputs, offsets, weight, bias, (stri, stri), (pad, pad), channel_per_group)))
+    gradcheck(ConvOffset2dFunction.apply,
+              (inputs, offsets, weight, bias, (stri, stri), (pad, pad), channel_per_group, group)))

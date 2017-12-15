@@ -5,25 +5,26 @@ import os
 from deform3d.gradcheck import gradcheck
 import torch.nn as nn
 # from torch.autograd import gradcheck
-import torch.nn.functional as F
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
-batchsize = 1
-c_in = 1
-c_out = 1
-inpu = 3
-kernel = 1
-stri = 1
-pad = 0
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+batchsize = 2
+c_in = 64
+c_out = 32
+inpu = 7
+kernel = 3
+stri = 2
+pad = 1
 out = int((inpu + 2 * pad - kernel) / stri + 1)
-channel_per_group = 1
+channel_per_group = 2
 g_off = c_in // channel_per_group
 c_off = g_off * kernel * kernel * kernel * 3
+group = 32
 
-conv_offset3d = ConvOffset3dFunction((stri, stri, stri), (pad, pad, pad), channel_per_group)
 inputs = Variable(torch.rand(batchsize, c_in, inpu, inpu, inpu).cuda(), requires_grad=True)
 offsets = Variable(torch.rand(batchsize, c_off, out, out, out).cuda(), requires_grad=True)
-weight = Variable(torch.rand(c_out, c_in, kernel, kernel, kernel).cuda(), requires_grad=True)
+weight = Variable(torch.rand(c_out, c_in // group, kernel, kernel, kernel).cuda(), requires_grad=True)
+bias = Variable(torch.rand(c_out).cuda(), requires_grad=True)
 
-# print(gradcheck(conv_offset3d, (inputs, offsets, weight)))
-print(gradcheck(F.conv3d, (inputs, weight)))
+print(gradcheck(ConvOffset3dFunction.apply,
+                (inputs, offsets, weight, bias, (stri, stri, stri), (pad, pad, pad), channel_per_group, group)))
+# print(gradcheck(F.conv3d, (inputs, weight)))

@@ -4,7 +4,7 @@ import os
 from deform2d_double.deform_conv2d_functions import ConvOffset2dFunction as my
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 batchsize = 1
 c_in = 1
 c_out = 1
@@ -30,8 +30,8 @@ weight = torch.DoubleTensor([[[[1.0] * kernel] * kernel] * c_in] * c_out).cuda()
 start2 = time.time()
 padding = [pad, pad]
 stride = [stri, stri]
-conv_offset = my(stride, padding, channel_per_group)
-output = conv_offset.forward(inpu, offset, weight)
+ctx = None
+output = my.forward(ctx, inpu, offset, weight, bias=None)
 tmp = output.cpu().numpy()
 s21 = time.time()
 

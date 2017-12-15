@@ -14,21 +14,21 @@ int deform_conv_forward_cuda(
         THCudaDoubleTensor *columns, THCudaDoubleTensor *output,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
-        const int channel_per_deformable_group);
+        const int channel_per_deformable_group, const int group);
 
 int deform_conv_backward_input_offset_cuda(
         THCudaDoubleTensor *input, THCudaDoubleTensor *weight, THCudaDoubleTensor *offset, THCudaDoubleTensor *grad_output,
         THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_input, THCudaDoubleTensor *grad_offset,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
-        const int channel_per_deformable_group);
+        const int channel_per_deformable_group, const int group);
 
 int deform_conv_backward_weight_cuda(
         THCudaDoubleTensor *input, THCudaDoubleTensor *offset, THCudaDoubleTensor *grad_output,
         THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_weight,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
-        const int channel_per_deformable_group);
+        const int channel_per_deformable_group, const int group);
 
 
 //#endif //DEFORM3D_NEW_PYTORCH_DEFORM_CONV3D_CUDA_H
