@@ -4,6 +4,7 @@ from torch.utils.ffi import create_extension
 
 sources = ['lib/conv2d_cuda.cpp']
 headers = ['lib/conv2d_cuda.h']
+# defines = [('WITH_CUDA', None), ('TH_DOUBLE', None)]
 defines = [('WITH_CUDA', None)]
 
 this_file = path.dirname(path.realpath(__file__))

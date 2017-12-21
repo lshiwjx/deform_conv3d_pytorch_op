@@ -76,7 +76,7 @@ inline int get_cuda_blocks(const int num_kernel) {
 }
 
 void im2col(cudaStream_t stream,
-           const double *data_in,
+           const float *data_in,
            const int input_c,
            const int input_h, const int input_w,
            const int output_h, const int output_w,
@@ -84,7 +84,7 @@ void im2col(cudaStream_t stream,
            const int pad_h, const int pad_w,
            const int stride_h, const int stride_w,
            const int dilation_h, const int dilation_w,
-           double *data_col) {
+           float *data_col) {
     int num_kernels = output_h * output_w * input_c * kernel_h * kernel_w;
     im2col_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
             num_kernels, data_in,
@@ -146,7 +146,7 @@ __global__ void col2im_gpu_kernel(
 }
 
 void col2im(cudaStream_t stream,
-         const double *data_col,
+         const float *data_col,
          const int input_c,
          const int input_h, const int input_w,
          const int output_h, const int output_w,
@@ -154,7 +154,7 @@ void col2im(cudaStream_t stream,
          const int pad_h, const int pad_w,
          const int stride_h, const int stride_w,
          const int dilation_h, const int dilation_w,
-         double *grad_im) {
+         float *grad_im) {
     const int num_kernels = output_h * output_w * input_c * kernel_h * kernel_w;
     col2im_gpu_kernel << < get_cuda_blocks(num_kernels), THREAD_PRE_BLOCK, 0, stream >> > (
             num_kernels, data_col,

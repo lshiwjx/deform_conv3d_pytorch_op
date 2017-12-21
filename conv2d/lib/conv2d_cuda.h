@@ -9,25 +9,30 @@
 //#include "THC/THC.h"
 //#include "conv3d_cuda_kernel.h"
 
+//#define THCudaTensor THCudaDoubleTensor
+//#define TH_GEMM THCudaBlas_Dgemm
+//#define THCudaTensor THCudaTensor
+//#define TH_GEMM THCudaBlas_Sgemm
+
 int conv_forward_cuda(
-        THCudaDoubleTensor *input, THCudaDoubleTensor *weight,
-        THCudaDoubleTensor *columns, THCudaDoubleTensor *output,
+        THCudaTensor *input, THCudaTensor *weight,
+        THCudaTensor *columns, THCudaTensor *output,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int dilation_h, const int dilation_w,
         const int group);
 
 int conv_backward_input_cuda(
-        THCudaDoubleTensor *weight, THCudaDoubleTensor *grad_output,
-        THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_input,
+        THCudaTensor *weight, THCudaTensor *grad_output,
+        THCudaTensor *columns, THCudaTensor *grad_input,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int dilation_h, const int dilation_w,
         const int group);
 
 int conv_backward_weight_cuda(
-        THCudaDoubleTensor *input, THCudaDoubleTensor *grad_output,
-        THCudaDoubleTensor *columns, THCudaDoubleTensor *grad_weight,
+        THCudaTensor *input, THCudaTensor *grad_output,
+        THCudaTensor *columns, THCudaTensor *grad_weight,
         const int pad_h, const int pad_w,
         const int stride_h, const int stride_w,
         const int dilation_h, const int dilation_w,

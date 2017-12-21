@@ -1,8 +1,8 @@
 import torch
-from conv2d_double.conv2d_functions import Conv2dFunction
+from conv2d.conv2d_functions import Conv2dFunction
 from torch.autograd import Variable
 import os
-from conv2d_double.gradcheck import gradcheck
+from conv2d.gradcheck import gradcheck
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 batchsize = 2
