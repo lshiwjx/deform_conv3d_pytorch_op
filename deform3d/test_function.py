@@ -1,17 +1,18 @@
 import deform3d.deform_conv3d_op as deform_conv
 import torch
-
+from torch.autograd import Variable
 from deform3d.deform_conv3d_functions import ConvOffset3dFunction
 
 batchsize = 1
 c_in = 1
 c_out = 1
 channel_per_group = 1
-kernel_l = kernel_h = kernel_w = 1
+kernel_l = kernel_h = kernel_w = 3
 out_l = out_h = out_w = 3
 in_l = in_h = in_w = 3
-pad = 0
+pad = 1
 stri = 1
+dilaton = 2
 g_off = c_in // channel_per_group
 g_c = g_off * kernel_l * kernel_h * kernel_w * 3
 inpu = torch.FloatTensor([[[[[1.0, 1, 1], [2.0, 2, 2], [1.0, 1, 1]]] * in_l] * c_in] * batchsize).cuda()
@@ -25,10 +26,11 @@ tmp = offset.cpu().numpy()
 
 padding = [pad, pad, pad]
 stride = [stri, stri, stri]
-conv_offset = ConvOffset3dFunction(stride, padding, channel_per_group)
-output = conv_offset.forward(inpu, offset, weight)
-tmp = output.cpu().numpy()
-
+dilaton = [dilaton, dilaton, dilaton]
+# conv_offset = ConvOffset3dFunction(stride, padding, channel_per_group)
+output = ConvOffset3dFunction.apply(inpu, offset, weight, None, stride, padding, dilaton, channel_per_group)
+tmp = output.data.cpu().numpy()
+print(tmp)
 grad_output = torch.FloatTensor([[[[[1.0] * out_w] * out_h] * out_l] * c_out] * batchsize).cuda()
 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
                       output.size(2) * output.size(3) * output.size(4)).cuda()

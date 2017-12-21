@@ -11,7 +11,8 @@ in_l = in_h = in_w = 3
 kernel_l = kernel_h = kernel_w = 1
 out_l = out_h = out_w = 3
 stri = 1
-pad = 0
+pad = 2
+dilation = 2
 channel_per_group = 1
 
 conv = nn.Conv3d(
@@ -20,6 +21,7 @@ conv = nn.Conv3d(
     kernel_size=(kernel_l, kernel_h, kernel_w),
     stride=(stri, stri, stri),
     padding=(pad, pad, pad),
+    dilation=(dilation, dilation, dilation),
     bias=False).cuda()
 conv_offset3d = ConvOffset3d(c_in, c_out, (kernel_l, kernel_h, kernel_w), stri, pad, channel_per_group).cuda()
 
