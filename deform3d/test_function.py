@@ -35,22 +35,6 @@ grad_output = torch.FloatTensor([[[[[1.0] * out_w] * out_h] * out_l] * c_out] * 
 columns = torch.zeros(weight.size(1) * weight.size(2) * weight.size(3) * weight.size(4),
                       output.size(2) * output.size(3) * output.size(4)).cuda()
 
-# test for graph and grad
-# inputs = Variable(torch.randn(batchsize,c_in,in_l,in_h,in_w)
-#                   .type(torch.FloatTensor).cuda(),requires_grad=True)
-# offsets = Variable(torch.randn(batchsize,g_c,out_l,out_h,out_w)
-#                    .type(torch.FloatTensor).cuda(),requires_grad=True)
-# weights = Variable(torch.randn(c_out,c_in,kernel_l,kernel_h,kernel_w)
-#                    .type(torch.FloatTensor).cuda(), requires_grad=True)
-# o1 = conv_offset(inputs, offsets, weights)
-# o2 = Variable(grad_output,requires_grad=False)
-# loss = (o1 - o2).sum()
-# loss.backward()
-# grad_i = inputs.grad.data.cpu().numpy()
-# grad_o = offsets.grad.data.cpu().numpy()
-# grad_w = weights.grad.data.cpu().numpy()
-# ---------------------------------------------
-
 grad_input = inpu.new(*inpu.size()).zero_()
 grad_offset = offset.new(*offset.size()).zero_()
 deform_conv.deform_conv_backward_input_offset_cuda(
