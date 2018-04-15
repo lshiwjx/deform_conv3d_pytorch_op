@@ -7,9 +7,8 @@ An implementation of [2D deformable convolution in Pytorch](https://github.com/1
 Pytorch $leq$ 0.2.0
 
 ##Usage
-compile the op by:
+Change the path in make.sh to your own path. Compile the op by:
 
 '''
 bash make.sh
 '''
-
