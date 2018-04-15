@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.modules.module import Module
 from torch.nn.modules.utils import _pair
 
-from conv2d.conv2d_functions import Conv2dFunction
+from rev_conv2d.rev_conv2d_functions import Conv2dFunction
 
 
 class Conv2d(Module):
@@ -32,8 +32,12 @@ class Conv2d(Module):
         if out_channels % groups != 0:
             raise ValueError('out_channels must be divisible by groups')
 
-        self.weight = nn.Parameter(torch.cuda.FloatTensor(out_channels, in_channels // groups, *self.kernel_size))
-        nn.init.kaiming_normal(self.weight.data, mode='fan_out')
+        self.weight1 = nn.Parameter(
+            torch.cuda.FloatTensor(out_channels // 2, in_channels // groups // 2, *self.kernel_size))
+        self.weight2 = nn.Parameter(
+            torch.cuda.FloatTensor(out_channels // 2, in_channels // groups // 2, *self.kernel_size))
+        nn.init.kaiming_normal(self.weight1.data, mode='fan_out')
+        nn.init.kaiming_normal(self.weight2.data, mode='fan_out')
 
         if bias:
             self.bias = nn.Parameter(torch.cuda.FloatTensor(out_channels))
@@ -42,5 +46,6 @@ class Conv2d(Module):
             self.register_parameter('bias', None)
 
     def forward(self, inputs):
-        return Conv2dFunction.apply(inputs, self.weight, self.bias, self.stride, self.padding, self.dilation,
+        return Conv2dFunction.apply(inputs, self.weight1, self.weight2, self.bias, self.stride, self.padding,
+                                    self.dilation,
                                     self.group)
