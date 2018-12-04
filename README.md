@@ -5,7 +5,7 @@ The official implementation of [2D deformable convolution](https://github.com/ms
 An implementation of [2D deformable convolution in Pytorch](https://github.com/1zb/deformable-convolution-pytorch)
 
 ## Requirements
-Pytorch >= 0.2.0
+Pytorch = 0.3
 
 ## Usage
 Change the path in make.sh to your own path. Compile the op by:
@@ -13,4 +13,4 @@ Change the path in make.sh to your own path. Compile the op by:
 ```Bash
 bash make.sh
 ```
-The double version can pass the gradient check. 
+The double-precision version can pass the gradient check, i.e. test_gradient.py. 

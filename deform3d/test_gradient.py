@@ -6,7 +6,7 @@ from deform3d.gradcheck import gradcheck
 import torch.nn as nn
 # from torch.autograd import gradcheck
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 batchsize = 2
 c_in = 2
 c_out = 4
