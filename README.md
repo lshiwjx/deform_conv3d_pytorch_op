@@ -1,6 +1,6 @@
-# 3D Deformable Convolution Op of Pytorch
+# An Operation for 3D Deformable Convolution in Pytorch 0.3
 
-Realize the 2D convolution, 2D and 3D deformable convolution in Pytorch 0.3.0. 
+Realize the 2D convolution, 2D and 3D deformable convolution in Pytorch 0.3.0. Did not check the 0.4.
 
 Support the group convolution, dilate convolution, group deformable convolution, which split the channels of the input to several splits, each use the independent offset fields.
 
