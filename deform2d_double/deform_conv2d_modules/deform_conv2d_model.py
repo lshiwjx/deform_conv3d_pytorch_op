@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.modules.module import Module
 from torch.nn.modules.utils import _pair
 
-from deform2d_double.deform_conv2d_functions import ConvOffset2dFunction
+from deform_conv2d_functions import ConvOffset2dFunction
 
 
 class ConvOffset2d(Module):

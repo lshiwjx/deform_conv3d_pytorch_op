@@ -11,4 +11,3 @@ include_directories(
 )
 
 add_subdirectory(deform3d/lib)
-#add_subdirectory(deform2d/lib)

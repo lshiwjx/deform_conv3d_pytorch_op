@@ -1,12 +1,11 @@
 import torch
-from deform3d.deform_conv3d_functions import ConvOffset3dFunction
+from deform_conv3d_functions import ConvOffset3dFunction
 from torch.autograd import Variable
 import os
-from deform3d.gradcheck import gradcheck
+from gradcheck import gradcheck
 import torch.nn as nn
 # from torch.autograd import gradcheck
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 batchsize = 2
 c_in = 2
 c_out = 4

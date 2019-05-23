@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.modules.module import Module
 from torch.nn.modules.utils import _pair
 
-from conv2d.conv2d_functions import Conv2dFunction
+from conv2d_functions import Conv2dFunction
 
 
 class Conv2d(Module):

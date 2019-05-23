@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.modules.module import Module
 from torch.nn.modules.utils import _triple
 
-from deform3d.deform_conv3d_functions import ConvOffset3dFunction
+from deform_conv3d_functions import ConvOffset3dFunction
 
 
 class ConvOffset3d(Module):
@@ -38,7 +38,7 @@ class ConvOffset3d(Module):
         nn.init.kaiming_normal(self.weight.data, mode='fan_out')
         nn.init.constant(self.weight.data, 1)
         if bias:
-            self.bias = nn.Parameter(torch.cuda.DoubleTensor(out_channels))
+            self.bias = nn.Parameter(torch.cuda.FloatTensor(out_channels))
             nn.init.uniform(self.bias.data, -0.1, 0.1)
         else:
             self.register_parameter('bias', None)

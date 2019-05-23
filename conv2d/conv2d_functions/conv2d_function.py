@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Function, Variable
 
-from conv2d import conv2d_op
+import conv2d_op
 
 
 class Conv2dFunction(Function):

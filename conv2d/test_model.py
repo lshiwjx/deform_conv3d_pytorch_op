@@ -2,10 +2,9 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import os
-from conv2d.conv2d_modules import Conv2d
+from conv2d_modules import Conv2d
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 batchsize = 2
 c_in = 4
 c_out = 8

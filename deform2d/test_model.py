@@ -2,10 +2,9 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import os
-from deform2d.deform_conv2d_modules import ConvOffset2d
+from deform_conv2d_modules import ConvOffset2d
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 batchsize = 200
 c_in = 16
 c_out = 16

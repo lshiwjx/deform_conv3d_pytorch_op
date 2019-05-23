@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from deform3d.deform_conv3d_modules import ConvOffset3d
+from deform_conv3d_modules import ConvOffset3d
 
 batchsize = 2
 c_in = 1
@@ -11,8 +11,8 @@ in_l = in_h = in_w = 3
 kernel_l = kernel_h = kernel_w = 1
 out_l = out_h = out_w = 3
 stri = 1
-pad = 2
-dilation = 2
+pad = 0
+dilation = 1
 channel_per_group = 1
 
 conv = nn.Conv3d(

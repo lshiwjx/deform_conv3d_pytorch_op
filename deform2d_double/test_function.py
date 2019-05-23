@@ -1,10 +1,9 @@
-import deform2d_double.deform_conv2d_op as deform_conv
+import deform_conv2d_op as deform_conv
 import torch
 import os
-from deform2d_double.deform_conv2d_functions import ConvOffset2dFunction as my
+from deform_conv2d_functions import ConvOffset2dFunction
 import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 batchsize = 1
 c_in = 1
 c_out = 1
@@ -14,7 +13,8 @@ stri = 1
 pad = 0
 out = int((inpu + 2 * pad - kernel) / stri + 1)
 channel_per_group = 1
-
+dilation = 1
+group = 1
 g_off = c_in // channel_per_group
 g_c = g_off * kernel * kernel * 2
 inpu = torch.DoubleTensor([[[[1.0, 1, 1], [1.0, 1, 1], [1.0, 1, 1]]] * c_in] * batchsize).cuda()
@@ -30,9 +30,9 @@ weight = torch.DoubleTensor([[[[1.0] * kernel] * kernel] * c_in] * c_out).cuda()
 start2 = time.time()
 padding = [pad, pad]
 stride = [stri, stri]
-ctx = None
-output = my.forward(ctx, inpu, offset, weight, bias=None)
-tmp = output.cpu().numpy()
+dilations = [dilation, dilation]
+output = ConvOffset2dFunction.apply(inpu, offset, weight, None, stride, padding, dilations, channel_per_group)
+tmp = output.data.cpu().numpy()
 s21 = time.time()
 
 grad_output = torch.DoubleTensor([[[[1.0] * out] * out] * c_out] * batchsize).cuda()
@@ -43,7 +43,7 @@ grad_input = inpu.new(*inpu.size()).zero_()
 grad_offset = offset.new(*offset.size()).zero_()
 deform_conv.deform_conv_backward_input_offset_cuda(
     inpu, weight, offset, grad_output, columns, grad_input, grad_offset,
-    pad, pad, stri, stri, channel_per_group)
+    pad, pad, stri, stri, dilation, dilation, channel_per_group, group)
 grad_input_ = grad_input.cpu().numpy()
 s22 = time.time()
 # deform_conv.deform_conv_backward_offset_cuda(
@@ -54,7 +54,7 @@ s23 = time.time()
 grad_weight = weight.new(*weight.size()).zero_()
 deform_conv.deform_conv_backward_weight_cuda(
     inpu, offset, grad_output, columns, grad_weight,
-    pad, pad, stri, stri, channel_per_group)
+    pad, pad, stri, stri, dilation, dilation, channel_per_group, group)
 grad_weight_ = grad_weight.cpu().numpy()
 s24 = time.time()
 print('forward\n', tmp)

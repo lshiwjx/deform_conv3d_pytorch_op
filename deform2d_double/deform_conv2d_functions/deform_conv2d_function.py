@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Function, Variable
 
-from deform2d_double import deform_conv2d_op
+import deform_conv2d_op
 
 
 class ConvOffset2dFunction(Function):
